@@ -1,6 +1,7 @@
 from rest_framework import serializers
-from hospitals.models import Hospital
-from bloodbanks.models import BloodBank
+from apps.hospitals.models import Hospital
+from apps.bloodbanks.models import BloodBank
+from apps.inventory.models import Inventory
 
 class DemandForecastInputSerializer(serializers.Serializer):
     hospital_id = serializers.IntegerField()

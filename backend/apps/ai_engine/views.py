@@ -7,9 +7,9 @@ from rest_framework import status
 from rest_framework.permissions import IsAuthenticated
 from django.shortcuts import get_object_or_404
 from datetime import date
-
-from hospitals.models import Hospital
-from bloodbanks.models import BloodBank
+from apps.hospitals.models import Hospital
+from apps.bloodbanks.models import BloodBank
+from apps.inventory.models import Inventory
 from .serializers import (
     DemandForecastInputSerializer, DemandForecastOutputSerializer,
     AllocationInputSerializer, AllocationOutputSerializer,

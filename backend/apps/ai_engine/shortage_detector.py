@@ -1,7 +1,7 @@
 from collections import defaultdict
-from hospitals.models import Hospital
-from bloodbanks.models import BloodBank
-from inventory.models import Inventory
+from apps.hospitals.models import Hospital
+from apps.inventory.models import Inventory
+from apps.bloodbanks.models import BloodBank
 from .demand_predictor import DemandPredictor
 from datetime import datetime, timedelta
 from django.db import models
