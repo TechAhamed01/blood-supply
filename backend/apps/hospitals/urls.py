@@ -1,10 +1,7 @@
-from django.urls import path, include
-from rest_framework.routers import DefaultRouter
-from .views import HospitalViewSet
-
-router = DefaultRouter()
-router.register(r'hospitals', HospitalViewSet, basename='hospital')
+from django.urls import path
+from .views import HospitalListView, HospitalDetailView
 
 urlpatterns = [
-    path('', include(router.urls)),
+    path('', HospitalListView.as_view(), name='hospital-list'),
+    path('<int:pk>/', HospitalDetailView.as_view(), name='hospital-detail'),
 ]

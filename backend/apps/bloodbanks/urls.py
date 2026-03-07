@@ -1,10 +1,7 @@
-from django.urls import path, include
-from rest_framework.routers import DefaultRouter
-from .views import BloodBankViewSet
-
-router = DefaultRouter()
-router.register(r'bloodbanks', BloodBankViewSet, basename='bloodbank')
+from django.urls import path
+from .views import BloodBankListView, BloodBankDetailView
 
 urlpatterns = [
-    path('', include(router.urls)),
+    path('', BloodBankListView.as_view(), name='bloodbank-list'),
+    path('<int:pk>/', BloodBankDetailView.as_view(), name='bloodbank-detail'),
 ]

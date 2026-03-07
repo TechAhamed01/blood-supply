@@ -1,19 +1,15 @@
-from django.shortcuts import render
-
-# Create your views here.
-from rest_framework import viewsets, permissions
+from rest_framework import generics, permissions
 from .models import BloodBank
 from .serializers import BloodBankSerializer
+from apps.users.permissions import IsAdminOrReadOwnBloodBank
 
-class BloodBankViewSet(viewsets.ModelViewSet):
+class BloodBankListView(generics.ListAPIView):
     queryset = BloodBank.objects.all()
     serializer_class = BloodBankSerializer
     permission_classes = [permissions.IsAuthenticated]
 
-    def get_queryset(self):
-        user = self.request.user
-        if user.role == 'ADMIN':
-            return BloodBank.objects.all()
-        elif user.role == 'BLOODBANK' and hasattr(user, 'bloodbank_profile'):
-            return BloodBank.objects.filter(id=user.bloodbank_profile.id)
-        return BloodBank.objects.none()
+class BloodBankDetailView(generics.RetrieveAPIView):
+    queryset = BloodBank.objects.all()
+    serializer_class = BloodBankSerializer
+    permission_classes = [IsAdminOrReadOwnBloodBank]
+    lookup_field = 'bloodbank_id' 

@@ -1,37 +1,25 @@
 from rest_framework import serializers
-from django.contrib.auth import authenticate
 from .models import User
+from rest_framework_simplejwt.serializers import TokenObtainPairSerializer
+
+class CustomTokenObtainPairSerializer(TokenObtainPairSerializer):
+    @classmethod
+    def get_token(cls, user):
+        token = super().get_token(user)
+        # Add custom claims
+        token['role'] = user.role
+        
+        # Fix: Use hospital_id instead of id (since hospital_id is the primary key)
+        if user.hospital:
+            token['hospital_id'] = user.hospital.hospital_id  # Changed from .id to .hospital_id
+            
+        # Fix: Use bloodbank_id instead of id
+        if user.bloodbank:
+            token['bloodbank_id'] = user.bloodbank.bloodbank_id  # Changed from .id to .bloodbank_id
+            
+        return token
 
 class UserSerializer(serializers.ModelSerializer):
     class Meta:
         model = User
-        fields = ('id', 'email', 'full_name', 'role', 'date_joined')
-        read_only_fields = ('id', 'date_joined')
-
-class RegisterSerializer(serializers.ModelSerializer):
-    password = serializers.CharField(write_only=True, min_length=8)
-
-    class Meta:
-        model = User
-        fields = ('email', 'full_name', 'password', 'role')
-
-    def create(self, validated_data):
-        user = User.objects.create_user(
-            email=validated_data['email'],
-            full_name=validated_data.get('full_name', ''),
-            password=validated_data['password'],
-            role=validated_data.get('role', 'HOSPITAL')
-        )
-        return user
-
-class LoginSerializer(serializers.Serializer):
-    email = serializers.EmailField()
-    password = serializers.CharField()
-
-    def validate(self, data):
-        email = data.get('email')
-        password = data.get('password')
-        user = authenticate(username=email, password=password)
-        if user and user.is_active:
-            return user
-        raise serializers.ValidationError('Invalid credentials')
+        fields = ('id', 'username', 'email', 'role', 'contact', 'hospital', 'bloodbank')

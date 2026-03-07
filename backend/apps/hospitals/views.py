@@ -1,20 +1,15 @@
-from django.shortcuts import render
-
-# Create your views here.
-from rest_framework import viewsets, permissions
+from rest_framework import generics, permissions
 from .models import Hospital
 from .serializers import HospitalSerializer
+from apps.users.permissions import IsAdminOrReadOwnHospital
 
-class HospitalViewSet(viewsets.ModelViewSet):
+class HospitalListView(generics.ListAPIView):
     queryset = Hospital.objects.all()
     serializer_class = HospitalSerializer
     permission_classes = [permissions.IsAuthenticated]
 
-    def get_queryset(self):
-        user = self.request.user
-        if user.role == 'ADMIN':
-            return Hospital.objects.all()
-        elif user.role == 'HOSPITAL' and hasattr(user, 'hospital_profile'):
-            return Hospital.objects.filter(id=user.hospital_profile.id)
-        # Blood bank users may need read access? For now, return empty
-        return Hospital.objects.none()
+class HospitalDetailView(generics.RetrieveAPIView):
+    queryset = Hospital.objects.all()
+    serializer_class = HospitalSerializer
+    permission_classes = [IsAdminOrReadOwnHospital]
+    lookup_field = 'hospital_id'

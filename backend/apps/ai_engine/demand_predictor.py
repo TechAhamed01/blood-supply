@@ -14,12 +14,7 @@ class DemandPredictor:
             self.model = joblib.load(self.model_path)
 
     def predict_demand(self, hospital_id, blood_group, date):
-        """
-        Predict demand for a single hospital, blood group, and date.
-        date: datetime.date or datetime.datetime
-        """
         self.load_model()
-        # Prepare input as DataFrame with same feature names
         data = {
             'hospital_id': [hospital_id],
             'blood_group': [blood_group],
@@ -32,10 +27,6 @@ class DemandPredictor:
         return self.model.predict(X_pred)[0]
 
     def forecast_7_days(self, hospital_id, blood_group, start_date=None):
-        """
-        Forecast demand for next 7 days from start_date (default today).
-        Returns list of (date, predicted_units).
-        """
         if start_date is None:
             start_date = datetime.now().date()
         results = []

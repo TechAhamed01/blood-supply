@@ -1,140 +1,60 @@
-from django.shortcuts import render
-
-# Create your views here.
 from rest_framework.views import APIView
 from rest_framework.response import Response
-from rest_framework import status
-from rest_framework.permissions import IsAuthenticated
-from django.shortcuts import get_object_or_404
-from datetime import date
+from rest_framework import permissions, status
+from .demand_predictor import DemandPredictor
+from .shortage_detector import detect_shortage_risks
+from .delivery_time import DeliveryTimeEstimator
 from apps.hospitals.models import Hospital
 from apps.bloodbanks.models import BloodBank
-from apps.inventory.models import Inventory
-from .serializers import (
-    DemandForecastInputSerializer, DemandForecastOutputSerializer,
-    AllocationInputSerializer, AllocationOutputSerializer,
-    DeliveryTimeInputSerializer, DeliveryTimeOutputSerializer,
-    ShortageRiskOutputSerializer
-)
-from .demand_predictor import DemandPredictor
-from .allocation_algorithm import smart_allocate
-from .delivery_time import DeliveryTimeEstimator
-from .shortage_detector import detect_shortage_risks
-from .utils import haversine
+from datetime import datetime
 
-class DemandForecastAPIView(APIView):
-    permission_classes = [IsAuthenticated]
-
-    def post(self, request):
-        serializer = DemandForecastInputSerializer(data=request.data)
-        if not serializer.is_valid():
-            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-
-        hospital_id = serializer.validated_data['hospital_id']
-        blood_group = serializer.validated_data['blood_group']
-        start_date = serializer.validated_data.get('start_date', date.today())
-
-        try:
-            predictor = DemandPredictor()
-            forecast = predictor.forecast_7_days(hospital_id, blood_group, start_date)
-        except Exception as e:
-            return Response(
-                {"error": f"Prediction failed: {str(e)}"},
-                status=status.HTTP_500_INTERNAL_SERVER_ERROR
-            )
-
-        output_data = [{"date": d, "predicted_units": u} for d, u in forecast]
-        output_serializer = DemandForecastOutputSerializer(data=output_data, many=True)
-        output_serializer.is_valid()  # should be valid
-        return Response(output_serializer.data, status=status.HTTP_200_OK)
-
-
-class SmartAllocationAPIView(APIView):
-    permission_classes = [IsAuthenticated]
-
-    def post(self, request):
-        serializer = AllocationInputSerializer(data=request.data)
-        if not serializer.is_valid():
-            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-
-        hospital_id = serializer.validated_data['hospital_id']
-        blood_group = serializer.validated_data['blood_group']
-        units_requested = serializer.validated_data['units_requested']
-        emergency = serializer.validated_data.get('emergency_flag', False)
-
-        hospital = get_object_or_404(Hospital, id=hospital_id)
-
-        try:
-            allocations, status_code, message = smart_allocate(
-                hospital, blood_group, units_requested, emergency
-            )
-        except Exception as e:
-            return Response(
-                {"error": f"Allocation failed: {str(e)}"},
-                status=status.HTTP_500_INTERNAL_SERVER_ERROR
-            )
-
-        response_data = {
-            "status": status_code,
-            "message": message,
-            "allocations": allocations
-        }
-        output_serializer = AllocationOutputSerializer(data=response_data)
-        output_serializer.is_valid()
-        return Response(output_serializer.data, status=status.HTTP_200_OK)
-
-
-class DeliveryTimeEstimationAPIView(APIView):
-    permission_classes = [IsAuthenticated]
-
-    def post(self, request):
-        serializer = DeliveryTimeInputSerializer(data=request.data)
-        if not serializer.is_valid():
-            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-
-        data = serializer.validated_data
-
-        # Get coordinates
-        if 'bloodbank_id' in data and 'hospital_id' in data:
-            bloodbank = get_object_or_404(BloodBank, id=data['bloodbank_id'])
-            hospital = get_object_or_404(Hospital, id=data['hospital_id'])
-            lat1, lon1 = bloodbank.latitude, bloodbank.longitude
-            lat2, lon2 = hospital.latitude, hospital.longitude
-        else:
-            lat1, lon1 = data['bloodbank_lat'], data['bloodbank_lon']
-            lat2, lon2 = data['hospital_lat'], data['hospital_lon']
-
-        try:
-            estimator = DeliveryTimeEstimator()
-            estimated_time = estimator.estimate(lat1, lon1, lat2, lon2)
-            distance = haversine(lat1, lon1, lat2, lon2)
-        except Exception as e:
-            return Response(
-                {"error": f"Estimation failed: {str(e)}"},
-                status=status.HTTP_500_INTERNAL_SERVER_ERROR
-            )
-
-        output_data = {
-            "estimated_time_minutes": estimated_time,
-            "distance_km": round(distance, 2)
-        }
-        output_serializer = DeliveryTimeOutputSerializer(data=output_data)
-        output_serializer.is_valid()
-        return Response(output_serializer.data, status=status.HTTP_200_OK)
-
-
-class ShortageRiskAPIView(APIView):
-    permission_classes = [IsAuthenticated]
+class DemandForecastView(APIView):
+    permission_classes = [permissions.IsAuthenticated]
 
     def get(self, request):
-        try:
-            risks = detect_shortage_risks()
-        except Exception as e:
-            return Response(
-                {"error": f"Shortage detection failed: {str(e)}"},
-                status=status.HTTP_500_INTERNAL_SERVER_ERROR
-            )
+        hospital_id = request.query_params.get('hospital_id')
+        blood_group = request.query_params.get('blood_group')
+        if not hospital_id or not blood_group:
+            return Response({'error': 'hospital_id and blood_group required'}, status=status.HTTP_400_BAD_REQUEST)
 
-        output_serializer = ShortageRiskOutputSerializer(data=risks, many=True)
-        output_serializer.is_valid()
-        return Response(output_serializer.data, status=status.HTTP_200_OK)
+        # Check permission: hospital users can only forecast their own hospital
+        user = request.user
+        if user.role == 'HOSPITAL' and user.hospital.hospital_id != int(hospital_id):
+            return Response({'error': 'You can only forecast for your own hospital'}, status=status.HTTP_403_FORBIDDEN)
+
+        predictor = DemandPredictor()
+        try:
+            forecast = predictor.forecast_7_days(int(hospital_id), blood_group)
+        except Exception as e:
+            return Response({'error': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+        return Response({'hospital_id': hospital_id, 'blood_group': blood_group, 'forecast': forecast})
+
+class ShortageRisksView(APIView):
+    permission_classes = [permissions.IsAuthenticated]
+
+    def get(self, request):
+        # Only admin can see all risks? Or hospital can see their city? We'll allow admin only.
+        if request.user.role != 'ADMIN':
+            return Response({'error': 'Admin access required'}, status=status.HTTP_403_FORBIDDEN)
+        risks = detect_shortage_risks()
+        return Response(risks)
+
+class DeliveryTimeView(APIView):
+    permission_classes = [permissions.IsAuthenticated]
+
+    def post(self, request):
+        bloodbank_id = request.data.get('bloodbank_id')
+        hospital_id = request.data.get('hospital_id')
+        if not bloodbank_id or not hospital_id:
+            return Response({'error': 'bloodbank_id and hospital_id required'}, status=status.HTTP_400_BAD_REQUEST)
+
+        try:
+            bb = BloodBank.objects.get(bloodbank_id=bloodbank_id)
+            hosp = Hospital.objects.get(hospital_id=hospital_id)
+        except (BloodBank.DoesNotExist, Hospital.DoesNotExist):
+            return Response({'error': 'Invalid IDs'}, status=status.HTTP_404_NOT_FOUND)
+
+        estimator = DeliveryTimeEstimator()
+        minutes = estimator.estimate(bb.latitude, bb.longitude, hosp.latitude, hosp.longitude)
+        return Response({'delivery_time_minutes': minutes})

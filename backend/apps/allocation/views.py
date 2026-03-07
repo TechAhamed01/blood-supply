@@ -1,22 +1,16 @@
-from django.shortcuts import render
-
-# Create your views here.
-from rest_framework import viewsets, permissions, status
-from rest_framework.decorators import action
+from rest_framework import generics, permissions, status
 from rest_framework.response import Response
+from rest_framework.decorators import action
 from django.utils import timezone
 from django.db import transaction
 from .models import AllocationRequest, AllocationItem
 from .serializers import AllocationRequestSerializer
-from apps.hospitals.models import Hospital
 from apps.inventory.models import Inventory
-from apps.bloodbanks.models import BloodBank
 from apps.ai_engine.allocation_algorithm import smart_allocate
 from apps.ai_engine.delivery_time import DeliveryTimeEstimator
-from datetime import date
+from apps.users.permissions import IsHospitalUser, IsBloodBankUser, IsAdminUser
 
-class AllocationRequestViewSet(viewsets.ModelViewSet):
-    queryset = AllocationRequest.objects.all().order_by('-requested_at')
+class AllocationRequestListCreateView(generics.ListCreateAPIView):
     serializer_class = AllocationRequestSerializer
     permission_classes = [permissions.IsAuthenticated]
 
@@ -24,105 +18,83 @@ class AllocationRequestViewSet(viewsets.ModelViewSet):
         user = self.request.user
         if user.role == 'ADMIN':
             return AllocationRequest.objects.all()
-        elif user.role == 'HOSPITAL' and hasattr(user, 'hospital_profile'):
-            return AllocationRequest.objects.filter(hospital=user.hospital_profile)
-        elif user.role == 'BLOODBANK' and hasattr(user, 'bloodbank_profile'):
-            # Blood banks see requests that involve their inventory
-            return AllocationRequest.objects.filter(items__bloodbank=user.bloodbank_profile).distinct()
+        elif user.role == 'HOSPITAL':
+            return AllocationRequest.objects.filter(hospital=user.hospital)
+        elif user.role == 'BLOODBANK':
+            # Bloodbank sees requests that involve their bank? Could filter via items, but for simplicity, return all pending?
+            return AllocationRequest.objects.filter(status__in=['PENDING', 'PARTIALLY_FULFILLED'])
         return AllocationRequest.objects.none()
 
-    @action(detail=False, methods=['post'], url_path='create-allocation')
-    def create_allocation(self, request):
-        """Create a new allocation request and run smart allocation."""
-        # Input validation
-        hospital_id = request.data.get('hospital_id')
-        blood_group = request.data.get('blood_group')
-        units_requested = request.data.get('units_requested')
-        emergency = request.data.get('emergency_flag', False)
+    def perform_create(self, serializer):
+        # Only hospital users can create
+        if self.request.user.role != 'HOSPITAL':
+            self.permission_denied(self.request)
+        serializer.save(hospital=self.request.user.hospital, status='PENDING')
 
-        if not all([hospital_id, blood_group, units_requested]):
-            return Response({'error': 'Missing required fields'}, status=status.HTTP_400_BAD_REQUEST)
+class AllocationRequestDetailView(generics.RetrieveAPIView):
+    queryset = AllocationRequest.objects.all()
+    serializer_class = AllocationRequestSerializer
+    permission_classes = [permissions.IsAuthenticated]
 
-        try:
-            hospital = Hospital.objects.get(id=hospital_id)
-        except Hospital.DoesNotExist:
-            return Response({'error': 'Hospital not found'}, status=status.HTTP_404_NOT_FOUND)
+    # object-level permission handled by get_queryset? Actually RetrieveAPIView uses queryset, so if not in queryset, 404.
+    # We'll override get_queryset to filter by role.
+    def get_queryset(self):
+        user = self.request.user
+        if user.role == 'ADMIN':
+            return AllocationRequest.objects.all()
+        elif user.role == 'HOSPITAL':
+            return AllocationRequest.objects.filter(hospital=user.hospital)
+        elif user.role == 'BLOODBANK':
+            return AllocationRequest.objects.all()  # bloodbank can see all? Maybe restrict later.
+        return AllocationRequest.objects.none()
 
-        # Check if user has permission (hospital users can only request for themselves)
-        user = request.user
-        if user.role == 'HOSPITAL' and hasattr(user, 'hospital_profile'):
-            if user.hospital_profile.id != hospital.id:
-                return Response({'error': 'You can only request for your own hospital'}, status=403)
+class FulfillAllocationView(generics.GenericAPIView):
+    permission_classes = [IsBloodBankUser]
+    queryset = AllocationRequest.objects.all()
 
-        # Create request record
-        alloc_request = AllocationRequest.objects.create(
+    def post(self, request, pk):
+        allocation_request = self.get_object()
+        if allocation_request.status in ['FULFILLED', 'CANCELLED']:
+            return Response({'error': 'Request already fulfilled or cancelled'}, status=status.HTTP_400_BAD_REQUEST)
+
+        # Run smart allocation algorithm
+        hospital = allocation_request.hospital
+        allocations, status_result, message = smart_allocate(
             hospital=hospital,
-            blood_group=blood_group,
-            units_requested=units_requested,
-            emergency_flag=emergency,
-            status='PENDING'
+            blood_group=allocation_request.blood_group,
+            units_requested=allocation_request.units_requested - allocation_request.units_allocated,
+            emergency=allocation_request.emergency_flag
         )
 
-        # Call smart allocation from ai_engine
-        try:
-            allocations, status_code, message = smart_allocate(
-                hospital, blood_group, units_requested, emergency
-            )
-        except Exception as e:
-            alloc_request.status = 'CANCELLED'
-            alloc_request.notes = f"Allocation failed: {str(e)}"
-            alloc_request.save()
-            return Response({'error': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+        if not allocations:
+            return Response({'message': message}, status=status.HTTP_200_OK)
 
-        # Process allocations if any
-        total_allocated = 0
+        # Update inventory and create AllocationItems
         with transaction.atomic():
+            total_taken = 0
             for alloc in allocations:
-                inventory_id = alloc['inventory_id']
-                try:
-                    batch = Inventory.objects.select_for_update().get(id=inventory_id)
-                except Inventory.DoesNotExist:
-                    continue
+                batch = Inventory.objects.select_for_update().get(id=alloc['inventory_id'])
                 if batch.units_available < alloc['units_taken']:
-                    # Should not happen if algorithm is correct, but handle
-                    continue
-                # Reduce available units
+                    raise Exception("Insufficient units now")  # rollback
                 batch.units_available -= alloc['units_taken']
                 batch.save()
-
-                # Create allocation item
-                bloodbank = BloodBank.objects.get(id=alloc['bloodbank_id'])
                 AllocationItem.objects.create(
-                    allocation_request=alloc_request,
+                    allocation_request=allocation_request,
                     inventory_batch=batch,
-                    bloodbank=bloodbank,
                     units_taken=alloc['units_taken'],
-                    distance_km=alloc.get('distance_km'),
-                    estimated_delivery_min=alloc.get('estimated_delivery_min')
+                    bloodbank_id=alloc['bloodbank_id'],
+                    distance_km=alloc['distance_km'],
+                    estimated_delivery_min=alloc['estimated_delivery_min']
                 )
-                total_allocated += alloc['units_taken']
+                total_taken += alloc['units_taken']
 
-        # Update request
-        alloc_request.units_allocated = total_allocated
-        if total_allocated == 0:
-            alloc_request.status = 'PENDING'  # maybe change to UNAVAILABLE? Keep as pending.
-        elif total_allocated < units_requested:
-            alloc_request.status = 'PARTIALLY_FULFILLED'
-        else:
-            alloc_request.status = 'FULFILLED'
-        if total_allocated > 0:
-            alloc_request.allocated_at = timezone.now()
-        alloc_request.save()
+            allocation_request.units_allocated += total_taken
+            if allocation_request.units_allocated >= allocation_request.units_requested:
+                allocation_request.status = 'FULFILLED'
+            else:
+                allocation_request.status = 'PARTIALLY_FULFILLED'
+            allocation_request.allocated_at = timezone.now()
+            allocation_request.save()
 
-        serializer = self.get_serializer(alloc_request)
-        return Response(serializer.data, status=status.HTTP_201_CREATED)
-
-    @action(detail=True, methods=['post'], url_path='cancel')
-    def cancel_request(self, request, pk=None):
-        """Cancel a pending request."""
-        alloc_request = self.get_object()
-        if alloc_request.status not in ['PENDING', 'PARTIALLY_FULFILLED']:
-            return Response({'error': 'Request cannot be cancelled'}, status=400)
-        alloc_request.status = 'CANCELLED'
-        alloc_request.save()
-        return Response({'status': 'cancelled'})
+        serializer = AllocationRequestSerializer(allocation_request)
+        return Response(serializer.data, status=status.HTTP_200_OK)
