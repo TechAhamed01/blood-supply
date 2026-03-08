@@ -8,6 +8,7 @@ from apps.hospitals.models import Hospital
 from apps.bloodbanks.models import BloodBank
 from datetime import datetime
 
+
 class DemandForecastView(APIView):
     permission_classes = [permissions.IsAuthenticated]
 

@@ -3,5 +3,5 @@ from .views import BloodBankListView, BloodBankDetailView
 
 urlpatterns = [
     path('', BloodBankListView.as_view(), name='bloodbank-list'),
-    path('<int:pk>/', BloodBankDetailView.as_view(), name='bloodbank-detail'),
+    path('<int:bloodbank_id>/', BloodBankDetailView.as_view(), name='bloodbank-detail'),
 ]

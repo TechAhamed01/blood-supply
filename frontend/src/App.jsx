@@ -1,35 +1,34 @@
-import { useState } from 'react'
-import reactLogo from './assets/react.svg'
-import viteLogo from '/vite.svg'
-import './App.css'
+import React from 'react';
+import AppRouter from './router';
+import Footer from './components/common/Footer';
+import { useAlert } from './contexts/AlertContext';
 
 function App() {
-  const [count, setCount] = useState(0)
+  const { alerts } = useAlert();
 
   return (
-    <>
-      <div>
-        <a href="https://vite.dev" target="_blank">
-          <img src={viteLogo} className="logo" alt="Vite logo" />
-        </a>
-        <a href="https://react.dev" target="_blank">
-          <img src={reactLogo} className="logo react" alt="React logo" />
-        </a>
+    <div className="min-h-screen bg-gray-50 flex flex-col">
+      {/* Alert Container */}
+      <div className="fixed top-20 right-4 z-50 space-y-2">
+        {alerts.map((alert) => (
+          <div
+            key={alert.id}
+            className={`px-4 py-3 rounded-lg shadow-lg animate-slide-in ${
+              alert.type === 'success' ? 'bg-green-500' :
+              alert.type === 'error' ? 'bg-red-500' :
+              alert.type === 'warning' ? 'bg-yellow-500' :
+              'bg-blue-500'
+            } text-white`}
+          >
+            {alert.message}
+          </div>
+        ))}
       </div>
-      <h1>Vite + React</h1>
-      <div className="card">
-        <button onClick={() => setCount((count) => count + 1)}>
-          count is {count}
-        </button>
-        <p>
-          Edit <code>src/App.jsx</code> and save to test HMR
-        </p>
-      </div>
-      <p className="read-the-docs">
-        Click on the Vite and React logos to learn more
-      </p>
-    </>
-  )
+
+      <AppRouter />
+      <Footer />
+    </div>
+  );
 }
 
-export default App
+export default App;
