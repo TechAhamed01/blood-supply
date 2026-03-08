@@ -8,8 +8,9 @@ from apps.inventory.models import Inventory
 # Added specific helper imports from your ai_engine
 from apps.ai_engine.allocation_algorithm import (
     smart_allocate, 
+    get_nearest_bloodbanks_with_details,
     is_bloodbank_near_request,
-    get_nearby_bloodbanks_for_request
+    smart_allocate_with_bank_details
 )
 from apps.users.permissions import IsHospitalUser, IsBloodBankUser
 

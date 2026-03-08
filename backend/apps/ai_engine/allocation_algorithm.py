@@ -7,63 +7,11 @@ from apps.inventory.models import Inventory
 from .utils import haversine
 from .delivery_time import DeliveryTimeEstimator
 
-# ============== NEW PROXIMITY FUNCTIONS ==============
-
-def get_nearby_bloodbanks_for_request(hospital, blood_group, units_needed, max_results=3):
-    """
-    Find the nearest blood banks with sufficient stock for a specific request
-    Returns list of bloodbank objects with distance
-    """
-    # Get all active blood banks
-    bloodbanks = BloodBank.objects.filter(
-        operational_status='Active'
-    )
-    
-    banks_with_stock = []
-    hospital_lat = float(hospital.latitude)
-    hospital_lon = float(hospital.longitude)
-    
-    for bb in bloodbanks:
-        # Check if this blood bank has any available units of the requested blood group
-        total_avail = Inventory.objects.filter(
-            bloodbank=bb,
-            blood_group=blood_group,
-            expiry_date__gt=datetime.now().date(),
-            units_available__gt=0
-        ).aggregate(total=Sum('units_available'))['total'] or 0
-        
-        if total_avail > 0:
-            # Calculate distance
-            distance = haversine(
-                hospital_lat, hospital_lon,
-                float(bb.latitude), float(bb.longitude)
-            )
-            banks_with_stock.append({
-                'bloodbank': bb,
-                'bloodbank_id': bb.bloodbank_id,
-                'distance': round(distance, 2),
-                'available': total_avail,
-                'name': bb.name
-            })
-    
-    # Sort by distance and return top N
-    banks_with_stock.sort(key=lambda x: x['distance'])
-    return banks_with_stock[:max_results]
-
-def is_bloodbank_near_request(bloodbank_id, hospital, blood_group, units_needed):
-    """
-    Check if a specific blood bank is among the top 3 nearest for this request
-    """
-    nearby_banks = get_nearby_bloodbanks_for_request(hospital, blood_group, units_needed, max_results=3)
-    nearby_ids = [bank['bloodbank_id'] for bank in nearby_banks]
-    return bloodbank_id in nearby_ids
-
-
-# ============== ORIGINAL SMART ALLOCATE FUNCTION (KEEP THIS) ==============
+# ============== ORIGINAL SMART ALLOCATE FUNCTION ==============
 
 def smart_allocate(hospital, blood_group, units_requested, emergency=False, current_bloodbank=None):
     """
-    Original smart allocation function - kept for compatibility with FulfillAllocationView
+    Original smart allocation function - kept for compatibility
     """
     if current_bloodbank:
         # Only use the current blood bank's inventory
@@ -142,3 +90,95 @@ def smart_allocate(hospital, blood_group, units_requested, emergency=False, curr
         message = f'Only {units_requested - units_needed} of {units_requested} units allocated.'
 
     return allocations, status, message
+
+
+# ============== NEW FUNCTIONS FOR ASSIGNED BANKS ==============
+
+def get_nearest_bloodbanks_with_details(hospital, blood_group, units_needed, limit=3):
+    """
+    Get the nearest blood banks with their details and available stock
+    Returns list of banks sorted by distance with full details
+    """
+    bloodbanks = BloodBank.objects.filter(
+        operational_status='Active'
+    )
+    
+    banks_with_details = []
+    hospital_lat = float(hospital.latitude)
+    hospital_lon = float(hospital.longitude)
+    
+    for bb in bloodbanks:
+        # Calculate total available units
+        total_avail = Inventory.objects.filter(
+            bloodbank=bb,
+            blood_group=blood_group,
+            expiry_date__gt=datetime.now().date(),
+            units_available__gt=0
+        ).aggregate(total=Sum('units_available'))['total'] or 0
+        
+        if total_avail > 0:
+            # Calculate distance
+            distance = haversine(
+                hospital_lat, hospital_lon,
+                float(bb.latitude), float(bb.longitude)
+            )
+            
+            # Get batch details for expiry information
+            batches = Inventory.objects.filter(
+                bloodbank=bb,
+                blood_group=blood_group,
+                expiry_date__gt=datetime.now().date(),
+                units_available__gt=0
+            ).order_by('expiry_date').values('expiry_date', 'units_available')
+            
+            # Calculate estimated delivery time
+            dt_estimator = DeliveryTimeEstimator()
+            delivery_time = dt_estimator.estimate(
+                float(bb.latitude), float(bb.longitude),
+                hospital_lat, hospital_lon
+            )
+            
+            banks_with_details.append({
+                'bloodbank_id': bb.bloodbank_id,
+                'bloodbank_name': bb.name,
+                'city': bb.city,
+                'distance_km': round(distance, 2),
+                'available_units': total_avail,
+                'estimated_delivery_min': delivery_time,
+                'contact': bb.contact,
+                'batches': list(batches),
+                'can_fulfill': total_avail >= units_needed
+            })
+    
+    # Sort by distance and return top N
+    banks_with_details.sort(key=lambda x: x['distance_km'])
+    return banks_with_details[:limit]
+
+def is_bloodbank_near_request(bloodbank_id, hospital, blood_group, units_needed):
+    """
+    Check if a specific blood bank is among the top 3 nearest for this request
+    """
+    nearby_banks = get_nearest_bloodbanks_with_details(hospital, blood_group, units_needed, limit=3)
+    nearby_ids = [bank['bloodbank_id'] for bank in nearby_banks]
+    return bloodbank_id in nearby_ids
+
+def smart_allocate_with_bank_details(hospital, blood_group, units_requested, emergency=False):
+    """
+    Smart allocation that returns both allocation plan and nearest banks
+    """
+    # Get nearest banks with details
+    nearest_banks = get_nearest_bloodbanks_with_details(
+        hospital, blood_group, units_requested, limit=3
+    )
+    
+    # Original allocation logic
+    allocations, status, message = smart_allocate(
+        hospital, blood_group, units_requested, emergency
+    )
+    
+    return {
+        'allocations': allocations,
+        'nearest_banks': nearest_banks,
+        'status': status,
+        'message': message
+    }

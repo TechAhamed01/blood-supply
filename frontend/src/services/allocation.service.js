@@ -3,11 +3,9 @@ import api from './api';
 class AllocationService {
   async getAllRequests(params = {}) {
     const response = await api.get('/allocation/requests/', { params });
-    // Handle paginated response
     if (response.data && response.data.results) {
       return response.data.results;
     }
-    // Fallback to direct array
     return response.data;
   }
 
@@ -25,8 +23,14 @@ class AllocationService {
   }
 
   async getRequestById(id) {
-    const response = await api.get(`/allocation/requests/${id}/`);
-    return response.data;
+    try {
+      const response = await api.get(`/allocation/requests/${id}/`);
+      console.log('Request detail with assigned banks:', response.data);
+      return response.data;
+    } catch (error) {
+      console.error('Error fetching request details:', error);
+      throw error;
+    }
   }
 
   async fulfillRequest(id) {
@@ -37,7 +41,6 @@ class AllocationService {
   async getHospitalRequests() {
     try {
       const response = await api.get('/allocation/requests/');
-      console.log('Raw API response:', response.data); 
       
       if (response.data && typeof response.data === 'object') {
         if (response.data.results && Array.isArray(response.data.results)) {
@@ -46,43 +49,27 @@ class AllocationService {
         if (Array.isArray(response.data)) {
           return response.data;
         }
-        console.warn('Unexpected response format:', response.data);
-        return [];
       }
-      
       return [];
     } catch (error) {
       console.error('Error fetching hospital requests:', error);
-      throw error;
+      return [];
     }
   }
 
-  /**
-   * Fetches only requests with PENDING status.
-   * Includes robust handling for DRF pagination and catch-all error recovery.
-   */
   async getPendingRequests() {
     try {
       const response = await api.get('/allocation/requests/?status=PENDING');
-      console.log('Pending requests response:', response.data);
       
-      let requests = [];
-      if (response.data && typeof response.data === 'object') {
-        // Handle Django REST Framework paginated results
-        if (response.data.results && Array.isArray(response.data.results)) {
-          requests = response.data.results;
-        } 
-        // Handle standard JSON array response
-        else if (Array.isArray(response.data)) {
-          requests = response.data;
-        }
+      if (response.data && response.data.results) {
+        return response.data.results;
       }
-      
-      // Note: Proximity logic is handled on the backend as per current implementation
-      return requests;
+      if (Array.isArray(response.data)) {
+        return response.data;
+      }
+      return [];
     } catch (error) {
       console.error('Error fetching pending requests:', error);
-      // Return empty array instead of throwing to prevent dashboard UI crashes
       return [];
     }
   }
