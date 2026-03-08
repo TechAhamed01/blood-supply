@@ -11,9 +11,9 @@ import Unauthorized from '../pages/auth/Unauthorized';
 import HospitalDashboard from '../pages/hospital/HospitalDashboard';
 import RequestBlood from '../pages/hospital/RequestBlood';
 import MyRequests from '../pages/hospital/MyRequests';
+import RequestDetail from '../pages/hospital/RequestDetail';
 import DemandForecast from '../pages/hospital/DemandForecast';
 import HospitalProfile from '../pages/hospital/HospitalProfile';
-import RequestDetail from '../pages/hospital/RequestDetail'; // new
 
 // Blood Bank Pages
 import BloodBankDashboard from '../pages/bloodbank/BloodBankDashboard';
@@ -21,6 +21,7 @@ import InventoryManagement from '../pages/bloodbank/InventoryManagement';
 import PendingRequests from '../pages/bloodbank/PendingRequests';
 import FulfillRequest from '../pages/bloodbank/FulfillRequest';
 import BloodBankProfile from '../pages/bloodbank/BloodBankProfile';
+import AddInventory from '../pages/bloodbank/AddInventory'; // Create this new component
 
 // Admin Pages
 import AdminDashboard from '../pages/admin/AdminDashboard';
@@ -28,12 +29,13 @@ import AllHospitals from '../pages/admin/AllHospitals';
 import AllBloodBanks from '../pages/admin/AllBloodBanks';
 import Allocations from '../pages/admin/Allocations';
 import ShortageRisks from '../pages/admin/ShortageRisks';
-import AllocationDetail from '../pages/admin/AllocationDetail'; // new
 
 // Shared Pages
 import Home from '../pages/shared/Home';
 import About from '../pages/shared/About';
 import Contact from '../pages/shared/Contact';
+import Profile from '../pages/shared/Profile';
+import Settings from '../pages/shared/Settings';
 
 const AppRouter = () => {
   return (
@@ -93,6 +95,12 @@ const AppRouter = () => {
               <InventoryManagement />
             </PrivateRoute>
           } />
+          {/* ADD THIS NEW ROUTE */}
+          <Route path="inventory/add" element={
+            <PrivateRoute requiredRole="BLOODBANK">
+              <AddInventory />
+            </PrivateRoute>
+          } />
           <Route path="pending-requests" element={
             <PrivateRoute requiredRole="BLOODBANK">
               <PendingRequests />
@@ -132,17 +140,24 @@ const AppRouter = () => {
               <Allocations />
             </PrivateRoute>
           } />
-          <Route path="allocations/:id" element={
-            <PrivateRoute requiredRole="ADMIN">
-              <AllocationDetail />
-            </PrivateRoute>
-          } />
           <Route path="shortage-risks" element={
             <PrivateRoute requiredRole="ADMIN">
               <ShortageRisks />
             </PrivateRoute>
           } />
         </Route>
+
+        {/* Shared Protected Routes */}
+        <Route path="/profile" element={
+          <PrivateRoute>
+            <Profile />
+          </PrivateRoute>
+        } />
+        <Route path="/settings" element={
+          <PrivateRoute>
+            <Settings />
+          </PrivateRoute>
+        } />
       </Routes>
     </>
   );

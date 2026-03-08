@@ -35,46 +35,27 @@ const BloodBankDashboard = () => {
   const fetchDashboardData = async () => {
     try {
       setLoading(true);
-      
-      // 1. Fetch blood bank details
       const bankData = await bloodbankService.getBloodBankById(user.bloodbankId);
       setBloodBank(bankData);
 
-      // 2. Fetch inventory - ensure we get an array
       let inventoryData = [];
       try {
         const data = await inventoryService.getInventory();
-        if (Array.isArray(data)) {
-          inventoryData = data;
-        } else {
-          console.warn('Inventory data is not an array:', data);
-          inventoryData = [];
-        }
+        inventoryData = Array.isArray(data) ? data : [];
       } catch (invErr) {
         console.error('Failed to fetch inventory:', invErr);
-        inventoryData = [];
       }
       setInventory(inventoryData);
 
-      // 3. Fetch pending requests - with robust error handling
       let requests = [];
       try {
         const requestsData = await allocationService.getPendingRequests();
-        console.log('Processed requests data:', requestsData);
-        
-        if (Array.isArray(requestsData)) {
-          requests = requestsData;
-        } else {
-          console.warn('Requests data is not an array:', requestsData);
-          requests = [];
-        }
+        requests = Array.isArray(requestsData) ? requestsData : [];
       } catch (reqErr) {
         console.error('Failed to fetch requests:', reqErr);
-        requests = []; // Set to empty array on error to prevent dashboard crash
       }
       setPendingRequests(requests);
 
-      // 4. Calculate stats
       const expiringSoonCount = inventoryData.filter(item => {
         if (!item || !item.expiry_date) return false;
         const daysUntilExpiry = Math.ceil(
@@ -91,7 +72,7 @@ const BloodBankDashboard = () => {
         totalInventory: totalUnits,
         expiringSoon: expiringSoonCount,
         pendingRequests: requests.length,
-        fulfilledToday: 0, // This can be linked to a 'fulfilled_today' API endpoint later
+        fulfilledToday: 0,
       });
 
     } catch (err) {
@@ -182,22 +163,21 @@ const BloodBankDashboard = () => {
             <span className="text-yellow-600 font-medium">View →</span>
           </Link>
 
+          {/* UPDATED: Add New Batch Card */}
           <Link 
             to="/bloodbank/inventory/add"
-            className="group relative bg-gradient-to-r from-red-600 to-red-700 rounded-xl shadow-lg p-6 hover:shadow-xl transition overflow-hidden text-white"
+            className="bg-gradient-to-r from-primary-600 to-primary-700 rounded-xl shadow-lg p-6 hover:shadow-xl transition"
           >
-            <h3 className="text-lg font-semibold mb-2">Add New Batch</h3>
-            <p className="text-red-100 mb-4">Register new blood inventory</p>
-            <span className="inline-block bg-white text-red-600 px-4 py-2 rounded-lg font-medium hover:bg-gray-100 transition">
+            <h3 className="text-lg font-semibold text-white mb-2">Add New Batch</h3>
+            <p className="text-primary-100 mb-4">Register new blood inventory</p>
+            <button className="bg-white text-primary-600 px-4 py-2 rounded-lg font-medium hover:bg-gray-100 transition">
               Add Batch →
-            </span>
+            </button>
           </Link>
         </div>
 
         {/* Inventory and Requests */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          
-          {/* Inventory by Blood Group Section */}
           <div className="bg-white rounded-xl shadow-lg p-6">
             <h3 className="text-lg font-semibold text-gray-900 mb-4">
               Current Inventory by Blood Group
@@ -211,7 +191,6 @@ const BloodBankDashboard = () => {
             )}
           </div>
 
-          {/* Pending Requests Section */}
           <div className="bg-white rounded-xl shadow-lg p-6">
             <h3 className="text-lg font-semibold text-gray-900 mb-4">
               Pending Requests
