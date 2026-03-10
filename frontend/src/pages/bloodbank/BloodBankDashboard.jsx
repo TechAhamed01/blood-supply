@@ -35,28 +35,80 @@ const BloodBankDashboard = () => {
   const fetchDashboardData = async () => {
     try {
       setLoading(true);
+
+      // 1. Fetch blood bank details
       const bankData = await bloodbankService.getBloodBankById(user.bloodbankId);
       setBloodBank(bankData);
 
+      // 2. Fetch inventory
       let inventoryData = [];
       try {
         const data = await inventoryService.getInventory();
-        inventoryData = Array.isArray(data) ? data : [];
+        if (Array.isArray(data)) {
+          inventoryData = data;
+        } else {
+          console.warn('Inventory data is not an array:', data);
+          inventoryData = [];
+        }
       } catch (invErr) {
         console.error('Failed to fetch inventory:', invErr);
+        inventoryData = [];
       }
       setInventory(inventoryData);
 
+      // 3. Fetch pending requests
       let requests = [];
       try {
         const requestsData = await allocationService.getPendingRequests();
-        requests = Array.isArray(requestsData) ? requestsData : [];
+        if (Array.isArray(requestsData)) {
+          requests = requestsData;
+        } else {
+          console.warn('Requests data is not an array:', requestsData);
+          requests = [];
+        }
       } catch (reqErr) {
         console.error('Failed to fetch requests:', reqErr);
+        requests = [];
       }
       setPendingRequests(requests);
 
-      const expiringSoonCount = inventoryData.filter(item => {
+      // 4. Fetch today's fulfilled requests and calculate units
+      let fulfilledToday = 0;
+      try {
+        // Primary Method: Using the specific today's fulfilled service
+        const todaysFulfilled = await allocationService.getTodaysFulfilledRequests();
+        
+        fulfilledToday = todaysFulfilled.reduce((total, request) => {
+          // Sum up units from items belonging specifically to this blood bank
+          const bankItems = request.items?.filter(
+            item => item.bloodbank_id === parseInt(user.bloodbankId)
+          ) || [];
+          return total + bankItems.reduce((sum, item) => sum + item.units_taken, 0);
+        }, 0);
+        
+      } catch (fulfilledErr) {
+        console.error('Failed to fetch today\'s fulfilled requests:', fulfilledErr);
+        
+        // Alternative Fallback Method: Filter from general fulfilled requests
+        try {
+          const allRequests = await allocationService.getAllRequests({
+            status: 'FULFILLED',
+            bloodbank_id: user.bloodbankId
+          });
+          
+          const today = new Date().toDateString();
+          fulfilledToday = allRequests.filter(req => {
+            const allocatedDate = new Date(req.allocated_at).toDateString();
+            return allocatedDate === today;
+          }).length; // Note: Fallback counts requests, primary counts units
+          
+        } catch (altErr) {
+          console.error('Alternative method also failed:', altErr);
+        }
+      }
+
+      // 5. Calculate final stats
+      const expiringSoon = inventoryData.filter(item => {
         if (!item || !item.expiry_date) return false;
         const daysUntilExpiry = Math.ceil(
           (new Date(item.expiry_date) - new Date()) / (1000 * 60 * 60 * 24)
@@ -70,9 +122,9 @@ const BloodBankDashboard = () => {
 
       setStats({
         totalInventory: totalUnits,
-        expiringSoon: expiringSoonCount,
+        expiringSoon,
         pendingRequests: requests.length,
-        fulfilledToday: 0,
+        fulfilledToday: fulfilledToday,
       });
 
     } catch (err) {
@@ -140,6 +192,7 @@ const BloodBankDashboard = () => {
             value={stats.fulfilledToday}
             icon={CheckCircleIcon}
             color="bg-green-500"
+            subtext="units contributed"
           />
         </div>
 
@@ -163,7 +216,6 @@ const BloodBankDashboard = () => {
             <span className="text-yellow-600 font-medium">View →</span>
           </Link>
 
-          {/* UPDATED: Add New Batch Card */}
           <Link 
             to="/bloodbank/inventory/add"
             className="bg-gradient-to-r from-primary-600 to-primary-700 rounded-xl shadow-lg p-6 hover:shadow-xl transition"
@@ -220,7 +272,9 @@ const BloodBankDashboard = () => {
                     </div>
                     <div className="flex justify-between text-sm text-gray-600">
                       <span>Hospital: {request.hospital_name || 'N/A'}</span>
-                      <span className="text-xs italic">#{request.your_rank ? `${request.your_rank} nearest` : ''}</span>
+                      <span className="text-xs italic">
+                        {request.your_rank ? `#${request.your_rank} nearest` : ''}
+                      </span>
                     </div>
                   </Link>
                 ))}

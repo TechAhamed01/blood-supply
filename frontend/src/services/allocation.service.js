@@ -3,10 +3,8 @@ import api from './api';
 class AllocationService {
   async getAllRequests(params = {}) {
     const response = await api.get('/allocation/requests/', { params });
-    if (response.data && response.data.results) {
-      return response.data.results;
-    }
-    return response.data;
+    // Standardizing pagination check
+    return this._handlePaginatedData(response.data);
   }
 
   async createRequest(data) {
@@ -41,16 +39,7 @@ class AllocationService {
   async getHospitalRequests() {
     try {
       const response = await api.get('/allocation/requests/');
-      
-      if (response.data && typeof response.data === 'object') {
-        if (response.data.results && Array.isArray(response.data.results)) {
-          return response.data.results;
-        }
-        if (Array.isArray(response.data)) {
-          return response.data;
-        }
-      }
-      return [];
+      return this._handlePaginatedData(response.data);
     } catch (error) {
       console.error('Error fetching hospital requests:', error);
       return [];
@@ -59,19 +48,52 @@ class AllocationService {
 
   async getPendingRequests() {
     try {
-      const response = await api.get('/allocation/requests/?status=PENDING');
-      
-      if (response.data && response.data.results) {
-        return response.data.results;
-      }
-      if (Array.isArray(response.data)) {
-        return response.data;
-      }
-      return [];
+      const response = await api.get('/allocation/requests/', { 
+        params: { status: 'PENDING' } 
+      });
+      return this._handlePaginatedData(response.data);
     } catch (error) {
       console.error('Error fetching pending requests:', error);
       return [];
     }
+  }
+
+  /**
+   * New Method: Fetch requests fulfilled today for a specific blood bank
+   */
+  async getTodaysFulfilledRequests() {
+    try {
+      const today = new Date().toISOString().split('T')[0];
+      
+      const response = await api.get('/allocation/requests/', {
+        params: {
+          status: 'FULFILLED',
+          allocated_at__date: today,
+          bloodbank_id: localStorage.getItem('bloodbankId')
+        }
+      });
+      
+      console.log('Today\'s fulfilled requests:', response.data);
+      return this._handlePaginatedData(response.data);
+    } catch (error) {
+      console.error('Error fetching today\'s fulfilled requests:', error);
+      return [];
+    }
+  }
+
+  /**
+   * Private helper to handle Django Rest Framework pagination vs Array responses
+   */
+  _handlePaginatedData(data) {
+    if (data && typeof data === 'object') {
+      if (data.results && Array.isArray(data.results)) {
+        return data.results;
+      }
+      if (Array.isArray(data)) {
+        return data;
+      }
+    }
+    return [];
   }
 }
 
