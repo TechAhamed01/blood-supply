@@ -7,6 +7,15 @@ import Navbar from '../components/common/Navbar';
 import Login from '../pages/auth/Login';
 import Unauthorized from '../pages/auth/Unauthorized';
 
+// Donor Pages
+import DonorLogin from '../pages/donor/DonorLogin';
+import DonorRegister from '../pages/donor/DonorRegister';
+import DonorDashboard from '../pages/donor/DonorDashboard';
+import DonationHistory from '../pages/donor/DonationHistory';
+import Notifications from '../pages/donor/Notifications';
+import NearbyBloodBanks from '../pages/donor/NearbyBloodBanks';
+import DonorPrivateRoute from '../components/common/DonorPrivateRoute';
+
 // Hospital Pages
 import HospitalDashboard from '../pages/hospital/HospitalDashboard';
 import RequestBlood from '../pages/hospital/RequestBlood';
@@ -21,7 +30,8 @@ import InventoryManagement from '../pages/bloodbank/InventoryManagement';
 import PendingRequests from '../pages/bloodbank/PendingRequests';
 import FulfillRequest from '../pages/bloodbank/FulfillRequest';
 import BloodBankProfile from '../pages/bloodbank/BloodBankProfile';
-import AddInventory from '../pages/bloodbank/AddInventory'; // Create this new component
+import AddInventory from '../pages/bloodbank/AddInventory';
+import DonorManagement from '../pages/bloodbank/DonorManagement'; // Ensure this is imported
 
 // Admin Pages
 import AdminDashboard from '../pages/admin/AdminDashboard';
@@ -48,6 +58,32 @@ const AppRouter = () => {
         <Route path="/contact" element={<Contact />} />
         <Route path="/login" element={<Login />} />
         <Route path="/unauthorized" element={<Unauthorized />} />
+
+        {/* Donor Routes */}
+        <Route path="/donor">
+          <Route path="login" element={<DonorLogin />} />
+          <Route path="register" element={<DonorRegister />} />
+          <Route path="dashboard" element={
+            <DonorPrivateRoute>
+              <DonorDashboard />
+            </DonorPrivateRoute>
+          } />
+          <Route path="history" element={
+            <DonorPrivateRoute>
+              <DonationHistory />
+            </DonorPrivateRoute>
+          } />
+          <Route path="notifications" element={
+            <DonorPrivateRoute>
+              <Notifications />
+            </DonorPrivateRoute>
+          } />
+          <Route path="nearby-banks" element={
+            <DonorPrivateRoute>
+              <NearbyBloodBanks />
+            </DonorPrivateRoute>
+          } />
+        </Route>
 
         {/* Hospital Routes */}
         <Route path="/hospital">
@@ -95,10 +131,14 @@ const AppRouter = () => {
               <InventoryManagement />
             </PrivateRoute>
           } />
-          {/* ADD THIS NEW ROUTE */}
           <Route path="inventory/add" element={
             <PrivateRoute requiredRole="BLOODBANK">
               <AddInventory />
+            </PrivateRoute>
+          } />
+          <Route path="donor-management" element={
+            <PrivateRoute requiredRole="BLOODBANK">
+              <DonorManagement />
             </PrivateRoute>
           } />
           <Route path="pending-requests" element={
@@ -112,7 +152,7 @@ const AppRouter = () => {
             </PrivateRoute>
           } />
           <Route path="profile" element={
-            <PrivateRoute requiredRole="BLOODBANK">
+            <PrivateRoute requiredRole="HOSPITAL">
               <BloodBankProfile />
             </PrivateRoute>
           } />

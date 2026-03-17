@@ -6,6 +6,7 @@ import App from './App'
 import { AuthProvider } from './contexts/AuthContext'
 import { ThemeProvider } from './contexts/ThemeContext'
 import { AlertProvider } from './contexts/AlertContext'
+import { DonorProvider } from './contexts/DonorContext' 
 import './index.css'
 
 ReactDOM.createRoot(document.getElementById('root')).render(
@@ -14,6 +15,7 @@ ReactDOM.createRoot(document.getElementById('root')).render(
       <ThemeProvider>
         <AuthProvider>
           <AlertProvider>
+            <DonorProvider>
             <App />
             <Toaster 
               position="top-right"
@@ -25,6 +27,7 @@ ReactDOM.createRoot(document.getElementById('root')).render(
                 },
               }}
             />
+            </DonorProvider>
           </AlertProvider>
         </AuthProvider>
       </ThemeProvider>

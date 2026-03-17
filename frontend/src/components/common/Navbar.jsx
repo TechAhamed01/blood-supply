@@ -31,10 +31,10 @@ const Navbar = () => {
     if (hasRole('ADMIN')) return '/admin';
     if (hasRole('HOSPITAL')) return '/hospital';
     if (hasRole('BLOODBANK')) return '/bloodbank';
+    if (hasRole('DONOR')) return '/donor/dashboard';
     return '/';
   };
 
-  // Close dropdown when clicking outside
   useEffect(() => {
     const handleClickOutside = (event) => {
       if (dropdownRef.current && !dropdownRef.current.contains(event.target)) {
@@ -71,6 +71,15 @@ const Navbar = () => {
             <Link to="/about" className="nav-link">About</Link>
             <Link to="/contact" className="nav-link">Contact</Link>
             
+            {!isAuthenticated && (
+              <Link
+                to="/donor/login"
+                className="text-gray-600 hover:text-primary-600 px-3 py-2 text-sm font-medium transition-colors"
+              >
+                Donor Login
+              </Link>
+            )}
+
             {isAuthenticated && (
               <Link to={getDashboardLink()} className="nav-link">
                 Dashboard
@@ -80,7 +89,6 @@ const Navbar = () => {
 
           {/* Right Section */}
           <div className="flex items-center space-x-4">
-            {/* Theme Toggle */}
             <button
               onClick={toggleTheme}
               className="p-2 text-gray-600 hover:text-primary-600 rounded-lg hover:bg-gray-100 transition"
@@ -89,7 +97,6 @@ const Navbar = () => {
               {isDark ? <SunIcon className="h-5 w-5" /> : <MoonIcon className="h-5 w-5" />}
             </button>
 
-            {/* User Menu */}
             {isAuthenticated ? (
               <div className="relative" ref={dropdownRef}>
                 <button
@@ -106,7 +113,6 @@ const Navbar = () => {
                   <ChevronDownIcon className={`h-4 w-4 text-gray-500 transition-transform duration-200 ${isDropdownOpen ? 'rotate-180' : ''}`} />
                 </button>
 
-                {/* Dropdown Menu - Always visible when isDropdownOpen is true */}
                 {isDropdownOpen && (
                   <div className="absolute right-0 mt-2 w-56 bg-white rounded-xl shadow-xl border border-gray-100 py-1 z-50">
                     <div className="px-4 py-3 border-b border-gray-100">
@@ -156,7 +162,6 @@ const Navbar = () => {
               </Link>
             )}
 
-            {/* Mobile menu button */}
             <button
               onClick={() => setIsOpen(!isOpen)}
               className="md:hidden p-2 text-gray-600 hover:text-primary-600 rounded-lg hover:bg-gray-100"
@@ -192,6 +197,16 @@ const Navbar = () => {
             >
               Contact
             </Link>
+
+            {!isAuthenticated && (
+              <Link 
+                to="/donor/login" 
+                className="block px-3 py-2 text-gray-700 hover:bg-gray-50 rounded-lg"
+                onClick={() => setIsOpen(false)}
+              >
+                Donor Login
+              </Link>
+            )}
             
             {isAuthenticated && (
               <>

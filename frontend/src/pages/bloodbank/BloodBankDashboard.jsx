@@ -9,7 +9,8 @@ import {
   ArchiveBoxIcon, 
   ClockIcon, 
   CheckCircleIcon,
-  ExclamationCircleIcon 
+  ExclamationCircleIcon,
+  UsersIcon // Added for Donor Management
 } from '@heroicons/react/24/outline';
 import InventoryChart from '../../components/charts/InventoryChart';
 import Loader from '../../components/common/Loader';
@@ -72,39 +73,18 @@ const BloodBankDashboard = () => {
       }
       setPendingRequests(requests);
 
-      // 4. Fetch today's fulfilled requests and calculate units
+      // 4. Fetch today's fulfilled requests
       let fulfilledToday = 0;
       try {
-        // Primary Method: Using the specific today's fulfilled service
         const todaysFulfilled = await allocationService.getTodaysFulfilledRequests();
-        
         fulfilledToday = todaysFulfilled.reduce((total, request) => {
-          // Sum up units from items belonging specifically to this blood bank
           const bankItems = request.items?.filter(
             item => item.bloodbank_id === parseInt(user.bloodbankId)
           ) || [];
           return total + bankItems.reduce((sum, item) => sum + item.units_taken, 0);
         }, 0);
-        
       } catch (fulfilledErr) {
         console.error('Failed to fetch today\'s fulfilled requests:', fulfilledErr);
-        
-        // Alternative Fallback Method: Filter from general fulfilled requests
-        try {
-          const allRequests = await allocationService.getAllRequests({
-            status: 'FULFILLED',
-            bloodbank_id: user.bloodbankId
-          });
-          
-          const today = new Date().toDateString();
-          fulfilledToday = allRequests.filter(req => {
-            const allocatedDate = new Date(req.allocated_at).toDateString();
-            return allocatedDate === today;
-          }).length; // Note: Fallback counts requests, primary counts units
-          
-        } catch (altErr) {
-          console.error('Alternative method also failed:', altErr);
-        }
       }
 
       // 5. Calculate final stats
@@ -196,8 +176,8 @@ const BloodBankDashboard = () => {
           />
         </div>
 
-        {/* Quick Actions */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+        {/* Quick Actions - Updated to Grid-cols-2 for desktop to accommodate new card */}
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
           <Link 
             to="/bloodbank/inventory"
             className="bg-white rounded-xl shadow-lg p-6 hover:shadow-xl transition border-l-4 border-blue-500"
@@ -214,6 +194,16 @@ const BloodBankDashboard = () => {
             <h3 className="text-lg font-semibold text-gray-900 mb-2">Pending Requests</h3>
             <p className="text-gray-600 mb-4">View and fulfill blood requests</p>
             <span className="text-yellow-600 font-medium">View →</span>
+          </Link>
+
+          {/* NEW: Donor Management Action */}
+          <Link
+            to="/bloodbank/donor-management"
+            className="bg-white rounded-xl shadow-lg p-6 hover:shadow-xl transition border-l-4 border-green-500"
+          >
+            <h3 className="text-lg font-semibold text-gray-900 mb-2">Donor Management</h3>
+            <p className="text-gray-600 mb-4">View eligible donors and send notifications</p>
+            <span className="text-green-600 font-medium">Manage →</span>
           </Link>
 
           <Link 

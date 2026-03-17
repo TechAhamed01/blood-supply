@@ -11,6 +11,7 @@ urlpatterns = [
     path('api/inventory/', include('apps.inventory.urls')),
     path('api/allocation/', include('apps.allocation.urls')),
     path('api/ai/', include('apps.ai_engine.urls')),
+    path('api/donors/', include('apps.donors.urls')),
 ]
 
 if settings.DEBUG:
