@@ -12,6 +12,7 @@ urlpatterns = [
     path('api/allocation/', include('apps.allocation.urls')),
     path('api/ai/', include('apps.ai_engine.urls')),
     path('api/donors/', include('apps.donors.urls')),
+    path('api/notifications/', include('apps.notifications.urls')),
 ]
 
 if settings.DEBUG:

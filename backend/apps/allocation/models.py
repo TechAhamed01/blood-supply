@@ -14,6 +14,7 @@ class AllocationRequest(models.Model):
     units_requested = models.PositiveIntegerField()
     units_allocated = models.PositiveIntegerField(default=0)
     emergency_flag = models.BooleanField(default=False)
+    is_emergency_broadcast = models.BooleanField(default=False)
     status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='PENDING')
     requested_at = models.DateTimeField(auto_now_add=True)
     allocated_at = models.DateTimeField(null=True, blank=True)

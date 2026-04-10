@@ -11,6 +11,7 @@ const schema = yup.object({
     .integer('Must be whole number')
     .max(100, 'Maximum 100 units per request'),
   emergency_flag: yup.boolean(),
+  is_emergency_broadcast: yup.boolean(),
   notes: yup.string().max(500, 'Notes too long')
 }).required();
 
@@ -72,6 +73,21 @@ const AllocationRequestForm = ({ onSubmit, loading }) => {
         <label htmlFor="emergency" className="ml-2 block text-sm text-gray-700">
           Emergency Request
         </label>
+      </div>
+
+      <div className="flex items-center p-4 bg-red-50 rounded-lg border border-red-100">
+        <input
+          {...register('is_emergency_broadcast')}
+          type="checkbox"
+          id="is_emergency_broadcast"
+          className="h-5 w-5 text-red-600 focus:ring-red-500 border-gray-300 rounded"
+        />
+        <div className="ml-3 flex flex-col">
+          <label htmlFor="is_emergency_broadcast" className="block text-sm font-bold text-red-800">
+            Emergency Broadcast Override
+          </label>
+          <span className="text-xs text-red-600">Triggers an immediate system-wide push notification to all reachable blood banks.</span>
+        </div>
       </div>
 
       <div>

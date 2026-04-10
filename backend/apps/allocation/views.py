@@ -5,6 +5,8 @@ from django.db import transaction
 from .models import AllocationRequest, AllocationItem
 from .serializers import AllocationRequestSerializer
 from apps.inventory.models import Inventory
+from apps.notifications.models import Notification
+from apps.users.models import User
 
 # AI engine helpers
 from apps.ai_engine.allocation_algorithm import (
@@ -78,7 +80,20 @@ class AllocationRequestListCreateView(generics.ListCreateAPIView):
     def perform_create(self, serializer):
         if self.request.user.role != 'HOSPITAL':
             self.permission_denied(self.request)
-        serializer.save(hospital=self.request.user.hospital, status='PENDING')
+        instance = serializer.save(hospital=self.request.user.hospital, status='PENDING')
+
+        if instance.is_emergency_broadcast:
+            # Create notifications for all blood bank users
+            bloodbank_users = User.objects.filter(role='BLOODBANK', is_active=True)
+            notifications = [
+                Notification(
+                    user=user,
+                    title="EMERGENCY BROADCAST",
+                    message=f"Hospital {instance.hospital.name} urgently requires {instance.units_requested} units of {instance.blood_group}.",
+                    notification_type='EMERGENCY'
+                ) for user in bloodbank_users
+            ]
+            Notification.objects.bulk_create(notifications)
 
 
 class AllocationRequestDetailView(generics.RetrieveAPIView):

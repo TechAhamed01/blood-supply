@@ -25,6 +25,7 @@ INSTALLED_APPS = [
     'apps.allocation',
     'apps.ai_engine',
     'apps.donors',
+    'apps.notifications',
 ]
 
 MIDDLEWARE = [

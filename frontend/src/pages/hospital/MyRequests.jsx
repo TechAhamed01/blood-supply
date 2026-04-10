@@ -11,6 +11,9 @@ const MyRequests = () => {
   const [error, setError] = useState(null);
   const { error: showError } = useAlert();
 
+  const [searchTerm, setSearchTerm] = useState('');
+  const [statusFilter, setStatusFilter] = useState('ALL');
+
   useEffect(() => {
     fetchRequests();
   }, []);
@@ -21,18 +24,14 @@ const MyRequests = () => {
       setError(null);
       
       const data = await allocationService.getHospitalRequests();
-      console.log('Processed requests data:', data); // Debug log
       
-      // Ensure we have an array
       if (Array.isArray(data)) {
         setRequests(data);
       } else {
-        console.error('Expected array but got:', data);
         setRequests([]);
         setError('Invalid data format received from server');
       }
     } catch (err) {
-      console.error('Failed to load requests:', err);
       setError(err.message || 'Failed to load requests');
       showError('Failed to load requests');
     } finally {
@@ -42,13 +41,21 @@ const MyRequests = () => {
 
   const getStatusBadge = (status) => {
     const statusMap = {
-      'PENDING': 'badge-warning',
-      'PARTIALLY_FULFILLED': 'badge-info',
-      'FULFILLED': 'badge-success',
-      'CANCELLED': 'badge-danger'
+      'PENDING': 'bg-yellow-100 text-yellow-800',
+      'PARTIALLY_FULFILLED': 'bg-blue-100 text-blue-800',
+      'FULFILLED': 'bg-green-100 text-green-800',
+      'CANCELLED': 'bg-red-100 text-red-800'
     };
-    return statusMap[status] || 'badge-info';
+    return `px-2 py-1 rounded-full text-xs font-semibold ${statusMap[status] || 'bg-gray-100 text-gray-800'}`;
   };
+
+  const filteredRequests = requests.filter(req => {
+    const matchesSearch = 
+      req.blood_group.toLowerCase().includes(searchTerm.toLowerCase()) || 
+      (req.id && req.id.toString().includes(searchTerm));
+    const matchesStatus = statusFilter === 'ALL' || req.status === statusFilter;
+    return matchesSearch && matchesStatus;
+  });
 
   if (loading) return <Loader />;
 
@@ -90,39 +97,54 @@ const MyRequests = () => {
           </div>
         ) : (
           <div className="bg-white rounded-xl shadow-lg overflow-hidden">
+            <div className="p-4 border-b border-gray-100 bg-gray-50 flex space-x-4">
+              <input
+                type="text"
+                placeholder="Search by ID or Blood Group..."
+                className="w-full max-w-sm rounded-md border-gray-300 shadow-sm focus:border-primary-500 focus:ring-primary-500 bg-white p-2 border"
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+              />
+              <select
+                className="rounded-md border-gray-300 shadow-sm focus:border-primary-500 focus:ring-primary-500 bg-white p-2 border"
+                value={statusFilter}
+                onChange={(e) => setStatusFilter(e.target.value)}
+              >
+                <option value="ALL">All Statuses</option>
+                <option value="PENDING">Pending</option>
+                <option value="PARTIALLY_FULFILLED">Partially Fulfilled</option>
+                <option value="FULFILLED">Fulfilled</option>
+              </select>
+            </div>
             <table className="min-w-full divide-y divide-gray-200">
               <thead className="bg-gray-50">
                 <tr>
-                  <th className="table-header">Blood Group</th>
-                  <th className="table-header">Requested Units</th>
-                  <th className="table-header">Allocated Units</th>
-                  <th className="table-header">Status</th>
-                  <th className="table-header">Date</th>
-                  <th className="table-header">Emergency</th>
-                  <th className="table-header">Actions</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">ID</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Blood Group</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Requested</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Allocated</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Date</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
                 </tr>
               </thead>
               <tbody className="bg-white divide-y divide-gray-200">
-                {requests.map((req) => (
+                {filteredRequests.map((req) => (
                   <tr key={`request-${req.id}`} className="hover:bg-gray-50">
-                    <td className="table-cell font-medium">{req.blood_group}</td>
-                    <td className="table-cell">{req.units_requested}</td>
-                    <td className="table-cell">{req.units_allocated}</td>
-                    <td className="table-cell">
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">#{req.id}</td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">{req.blood_group}</td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{req.units_requested}</td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{req.units_allocated}</td>
+                    <td className="px-6 py-4 whitespace-nowrap">
                       <span className={getStatusBadge(req.status)}>
                         {req.status}
                       </span>
                     </td>
-                    <td className="table-cell">{formatDate(req.requested_at)}</td>
-                    <td className="table-cell">
-                      {req.emergency_flag ? (
-                        <span className="bg-red-100 text-red-800 text-xs px-2 py-1 rounded-full">Emergency</span>
-                      ) : 'No'}
-                    </td>
-                    <td className="table-cell">
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{formatDate(req.requested_at)}</td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
                       <Link
                         to={`/hospital/requests/${req.id}`}
-                        className="text-primary-600 hover:text-primary-800 text-sm font-medium"
+                        className="text-primary-600 hover:text-primary-800"
                       >
                         View Details
                       </Link>

@@ -16,3 +16,21 @@ class Hospital(models.Model):
 
     def __str__(self):
         return self.name
+
+class HospitalInventory(models.Model):
+    BLOOD_GROUP_CHOICES = (
+        ('O+', 'O+'), ('O-', 'O-'),
+        ('A+', 'A+'), ('A-', 'A-'),
+        ('B+', 'B+'), ('B-', 'B-'),
+        ('AB+', 'AB+'), ('AB-', 'AB-'),
+    )
+    hospital = models.ForeignKey(Hospital, on_delete=models.CASCADE, related_name='inventory')
+    blood_group = models.CharField(max_length=3, choices=BLOOD_GROUP_CHOICES)
+    units_available = models.PositiveIntegerField(default=0)
+    last_updated = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        unique_together = ('hospital', 'blood_group')
+
+    def __str__(self):
+        return f"{self.hospital.name} - {self.blood_group}: {self.units_available}"

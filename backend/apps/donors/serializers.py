@@ -7,7 +7,7 @@ from apps.bloodbanks.serializers import BloodBankSerializer
 class DonorMinimalSerializer(serializers.ModelSerializer):
     class Meta:
         model = Donor
-        fields = ['donor_id', 'name', 'blood_group', 'city', 'email', 'phone']
+        fields = ['donor_id', 'name', 'blood_group', 'city', 'email', 'phone', 'eligibility_status']
 
 class DonorTokenObtainSerializer(serializers.Serializer):
     donor_id = serializers.CharField()

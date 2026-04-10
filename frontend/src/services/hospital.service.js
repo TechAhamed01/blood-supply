@@ -45,6 +45,16 @@ class HospitalService {
     const response = await api.put(`/hospitals/${id}/`, data);
     return response.data;
   }
+
+  async getInventory() {
+    const response = await api.get('/hospitals/inventory/');
+    return response.data;
+  }
+
+  async updateInventory(data) {
+    const response = await api.post('/hospitals/inventory/', data);
+    return response.data;
+  }
 }
 
 export default new HospitalService();

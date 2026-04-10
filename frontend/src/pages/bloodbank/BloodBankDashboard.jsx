@@ -100,11 +100,19 @@ const BloodBankDashboard = () => {
         (sum, item) => sum + (item.units_available || 0), 0
       );
 
+      // AI Urgent Restock Logic
+      const bloodGroupTotals = inventoryData.reduce((acc, item) => {
+        acc[item.blood_group] = (acc[item.blood_group] || 0) + item.units_available;
+        return acc;
+      }, {});
+      const criticalGroups = Object.keys(bloodGroupTotals).filter(bg => bloodGroupTotals[bg] < 5);
+
       setStats({
         totalInventory: totalUnits,
         expiringSoon,
         pendingRequests: requests.length,
         fulfilledToday: fulfilledToday,
+        criticalStockGroups: criticalGroups,
       });
 
     } catch (err) {
@@ -174,6 +182,16 @@ const BloodBankDashboard = () => {
             color="bg-green-500"
             subtext="units contributed"
           />
+        </div>
+
+        <div className="flex justify-end mb-6">
+          <Link
+            to="/bloodbank/history"
+            className="flex items-center text-sm font-medium text-gray-600 hover:text-gray-900 bg-white border border-gray-200 px-4 py-2 rounded-lg shadow-sm transition"
+          >
+            <ArchiveBoxIcon className="h-4 w-4 mr-2" />
+            View Fulfillment History
+          </Link>
         </div>
 
         {/* Quick Actions - Updated to Grid-cols-2 for desktop to accommodate new card */}
@@ -296,6 +314,28 @@ const BloodBankDashboard = () => {
                 <p className="text-sm text-red-700">
                   <span className="font-bold">Critical Alert:</span> You have {stats.expiringSoon} batches expiring within 7 days. Check the inventory management page to prioritize these.
                 </p>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* AI Restock Alert */}
+        {stats.criticalStockGroups && stats.criticalStockGroups.length > 0 && (
+          <div className="mt-4 bg-gradient-to-r from-red-50 to-orange-50 border-l-4 border-orange-500 p-4 rounded-lg shadow-sm">
+            <div className="flex items-start">
+              <div className="flex-shrink-0 mt-0.5">
+                <ArchiveBoxIcon className="h-5 w-5 text-orange-500 animate-bounce" />
+              </div>
+              <div className="ml-3 w-full flex flex-col sm:flex-row justify-between items-start sm:items-center">
+                <p className="text-sm text-orange-800">
+                  <span className="font-bold">AI Urgent Restock Alert:</span> Inventory for <span className="font-bold bg-orange-200 px-1 rounded">{stats.criticalStockGroups.join(', ')}</span> is critically low (under 5 units). It is highly recommended to trigger a Donor Drive immediately to replenish stock.
+                </p>
+                <Link
+                  to="/bloodbank/donor-management"
+                  className="mt-2 sm:mt-0 px-4 py-1.5 bg-orange-500 hover:bg-orange-600 text-white text-xs font-bold rounded-full shadow transition-colors whitespace-nowrap"
+                >
+                  Start Donor Drive →
+                </Link>
               </div>
             </div>
           </div>

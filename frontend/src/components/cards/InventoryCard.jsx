@@ -8,12 +8,13 @@ const InventoryCard = ({ item, onEdit, onDelete }) => {
 
   const expiryStatus = 
     daysUntilExpiry <= 0 ? 'bg-gray-100 text-gray-800' :
+    daysUntilExpiry <= 3 ? 'bg-red-200 text-red-900 border border-red-500 animate-pulse font-bold' :
     daysUntilExpiry <= 7 ? 'bg-red-100 text-red-800' :
     daysUntilExpiry <= 30 ? 'bg-yellow-100 text-yellow-800' :
     'bg-green-100 text-green-800';
 
   return (
-    <div className="bg-white rounded-lg shadow p-4 hover:shadow-md transition">
+    <div className={`bg-white rounded-lg shadow p-4 transition ${daysUntilExpiry > 0 && daysUntilExpiry <= 3 ? 'shadow-red-200 hover:shadow-red-300 ring-1 ring-red-400 scale-[1.01]' : 'hover:shadow-md'}`}>
       <div className="flex justify-between items-start mb-3">
         <div>
           <span className="text-lg font-bold text-gray-900">{item.blood_group}</span>

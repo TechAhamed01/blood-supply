@@ -11,8 +11,11 @@ import {
   MoonIcon,
   ChevronDownIcon,
   Cog6ToothIcon,
-  UserIcon
+  UserIcon,
+  BellIcon,
+  BellAlertIcon
 } from '@heroicons/react/24/outline';
+import notificationService from '../../services/notification.service';
 
 const Navbar = () => {
   const { user, isAuthenticated, logout, hasRole } = useAuth();
@@ -20,7 +23,40 @@ const Navbar = () => {
   const navigate = useNavigate();
   const [isOpen, setIsOpen] = useState(false);
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
+  const [isNotificationsOpen, setIsNotificationsOpen] = useState(false);
+  const [notifications, setNotifications] = useState([]);
   const dropdownRef = useRef(null);
+  const notificationsRef = useRef(null);
+
+  const fetchNotifications = async () => {
+    if (!isAuthenticated) return;
+    try {
+      const data = await notificationService.getNotifications(false);
+      setNotifications(data);
+    } catch(err) {
+      console.error(err);
+    }
+  };
+
+  useEffect(() => {
+    fetchNotifications();
+    const interval = setInterval(fetchNotifications, 30000);
+    return () => clearInterval(interval);
+  }, [isAuthenticated]);
+
+  const markRead = async (id) => {
+    try {
+      await notificationService.markAsRead(id);
+      fetchNotifications();
+    } catch(err) {}
+  };
+
+  const markAllRead = async () => {
+    try {
+      await notificationService.markAllAsRead();
+      fetchNotifications();
+    } catch(err) {}
+  };
 
   const handleLogout = () => {
     logout();
@@ -39,6 +75,9 @@ const Navbar = () => {
     const handleClickOutside = (event) => {
       if (dropdownRef.current && !dropdownRef.current.contains(event.target)) {
         setIsDropdownOpen(false);
+      }
+      if (notificationsRef.current && !notificationsRef.current.contains(event.target)) {
+        setIsNotificationsOpen(false);
       }
     };
 
@@ -96,6 +135,63 @@ const Navbar = () => {
             >
               {isDark ? <SunIcon className="h-5 w-5" /> : <MoonIcon className="h-5 w-5" />}
             </button>
+
+            {isAuthenticated && (
+              <div className="relative" ref={notificationsRef}>
+                <button
+                  onClick={() => setIsNotificationsOpen(!isNotificationsOpen)}
+                  className="p-2 text-gray-600 hover:text-primary-600 rounded-lg hover:bg-gray-100 transition relative"
+                >
+                  {notifications.length > 0 ? (
+                    <>
+                      <BellAlertIcon className="h-5 w-5 text-primary-600 animate-pulse" />
+                      <span className="absolute top-1 right-1 flex h-2 w-2">
+                        <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-primary-400 opacity-75"></span>
+                        <span className="relative inline-flex rounded-full h-2 w-2 bg-primary-500"></span>
+                      </span>
+                    </>
+                  ) : (
+                    <BellIcon className="h-5 w-5" />
+                  )}
+                </button>
+
+                {isNotificationsOpen && (
+                  <div className="absolute right-0 mt-2 w-80 bg-white rounded-xl shadow-xl border border-gray-100 py-2 z-50">
+                    <div className="px-4 py-2 border-b border-gray-100 flex justify-between items-center">
+                      <h3 className="text-sm font-semibold text-gray-900">Notifications</h3>
+                      {notifications.length > 0 && (
+                        <button onClick={markAllRead} className="text-xs text-primary-600 hover:text-primary-800">
+                          Mark all read
+                        </button>
+                      )}
+                    </div>
+                    <div className="max-h-64 overflow-y-auto">
+                      {notifications.length === 0 ? (
+                        <div className="px-4 py-6 text-center text-sm text-gray-500">No new notifications</div>
+                      ) : (
+                        notifications.map(notif => (
+                          <div 
+                            key={notif.id} 
+                            className={`px-4 py-3 border-b border-gray-50 flex flex-col cursor-pointer transition ${notif.notification_type === 'EMERGENCY' ? 'bg-red-50 hover:bg-red-100 border-l-4 border-l-red-500' : 'hover:bg-gray-50'}`} 
+                            onClick={() => markRead(notif.id)}
+                          >
+                            <div className="flex justify-between w-full items-center">
+                              <span className={`text-xs font-bold flex items-center ${notif.notification_type === 'EMERGENCY' ? 'text-red-700' : 'text-blue-600'}`}>
+                                {notif.notification_type === 'EMERGENCY' && <BellAlertIcon className="h-4 w-4 mr-1 inline animate-pulse" />}
+                                {notif.notification_type}
+                              </span>
+                              <span className="text-xs font-medium px-2 py-0.5 rounded-full bg-primary-100 text-primary-700">new</span>
+                            </div>
+                            <p className="text-sm font-bold text-gray-900 mt-2">{notif.title}</p>
+                            <p className="text-xs text-gray-700 mt-1">{notif.message}</p>
+                          </div>
+                        ))
+                      )}
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
 
             {isAuthenticated ? (
               <div className="relative" ref={dropdownRef}>

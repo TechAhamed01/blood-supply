@@ -233,7 +233,7 @@ const RequestDetail = () => {
 
             {/* Allocation Details */}
             {request.items && request.items.length > 0 && (
-              <div>
+              <div className="mb-8">
                 <h2 className="text-xl font-bold text-gray-900 mb-4">Allocation Details</h2>
                 <div className="bg-gray-50 rounded-xl overflow-hidden">
                   <table className="min-w-full divide-y divide-gray-200">
@@ -258,6 +258,47 @@ const RequestDetail = () => {
                       ))}
                     </tbody>
                   </table>
+                </div>
+              </div>
+            )}
+
+            {/* Delivery Timeline UX */}
+            {(request.status === 'FULFILLED' || request.status === 'PARTIALLY_FULFILLED') && (
+              <div className="mt-8 border-t border-gray-200 pt-8">
+                <h2 className="text-xl font-bold text-gray-900 mb-6 flex items-center">
+                  <MapPinIcon className="h-6 w-6 mr-2 text-primary-600" />
+                  Delivery Tracking
+                </h2>
+                <div className="relative pl-8 space-y-8">
+                  {/* Vertical Line */}
+                  <div className="absolute top-2 bottom-2 left-[15px] border-l-2 border-dashed border-primary-200"></div>
+                  
+                  {/* Steps */}
+                  <div className="relative flex animate-fade-in-up">
+                    <div className="absolute -left-[35px] h-8 w-8 bg-primary-100 border-2 border-primary-500 rounded-full flex items-center justify-center animate-pulse shadow-md z-10">
+                      <span className="w-2 h-2 bg-primary-600 rounded-full"></span>
+                    </div>
+                    <div className="bg-white border shadow-sm rounded-xl p-4 w-full ml-2">
+                      <h3 className="font-bold text-gray-900">Request Approved & Dispatched</h3>
+                      <p className="text-sm text-gray-500 mt-1">{formatDateTime(request.allocated_at)}</p>
+                    </div>
+                  </div>
+                  
+                  <div className="relative flex animate-fade-in-up hover:opacity-100" style={{ animationDelay: '0.2s'}}>
+                    <div className="absolute -left-[35px] h-8 w-8 bg-gray-50 border-2 border-gray-300 rounded-full flex items-center justify-center z-10"></div>
+                    <div className="bg-white border rounded-xl p-4 w-full ml-2 opacity-50 hover:opacity-100 transition">
+                      <h3 className="font-bold text-gray-900">In Transit</h3>
+                      <p className="text-sm text-gray-500 mt-1">Pending live location updates...</p>
+                    </div>
+                  </div>
+
+                  <div className="relative flex animate-fade-in-up" style={{ animationDelay: '0.4s'}}>
+                    <div className="absolute -left-[35px] h-8 w-8 bg-gray-50 border-2 border-gray-300 rounded-full flex items-center justify-center z-10"></div>
+                    <div className="bg-white border rounded-xl p-4 w-full ml-2 opacity-50 hover:opacity-100 transition">
+                      <h3 className="font-bold text-gray-900">Arrived at Hospital</h3>
+                      <p className="text-sm text-gray-500 mt-1">Expected soon</p>
+                    </div>
+                  </div>
                 </div>
               </div>
             )}

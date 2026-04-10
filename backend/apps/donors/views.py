@@ -74,7 +74,7 @@ class NearbyBloodBanksView(APIView):
         return Response(serializer.data)
 
 # For blood bank dashboard
-class EligibleDonorsView(APIView):
+class BloodBankDonorsView(APIView):
     permission_classes = [IsAuthenticated]
 
     def get(self, request):
@@ -93,10 +93,9 @@ class EligibleDonorsView(APIView):
                 status=status.HTTP_404_NOT_FOUND
             )
         
-        # Get eligible donors in the same city
+        # Get all donors in the same city
         donors = Donor.objects.filter(
             city=bloodbank.city,
-            eligibility_status='Eligible Now',
             is_active=True
         ).order_by('name')
         

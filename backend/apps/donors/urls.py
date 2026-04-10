@@ -2,7 +2,7 @@ from django.urls import path
 from .views import (
     DonorDashboardView, DonationHistoryView,
     NotificationListView, MarkNotificationReadView,
-    NearbyBloodBanksView, EligibleDonorsView, SendNotificationView,
+    NearbyBloodBanksView, BloodBankDonorsView, SendNotificationView,
     DonorTokenObtainPairView
 )
 
@@ -13,6 +13,6 @@ urlpatterns = [
     path('notifications/', NotificationListView.as_view(), name='donor_notifications'),
     path('notifications/<int:pk>/read/', MarkNotificationReadView.as_view(), name='mark_read'),
     path('nearby-banks/', NearbyBloodBanksView.as_view(), name='nearby_banks'),
-    path('eligible-donors/', EligibleDonorsView.as_view(), name='eligible_donors'),
+    path('bloodbank-donors/', BloodBankDonorsView.as_view(), name='bloodbank_donors'),
     path('send-notification/', SendNotificationView.as_view(), name='send_notification'),
 ]

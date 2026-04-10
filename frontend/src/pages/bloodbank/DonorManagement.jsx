@@ -28,7 +28,7 @@ const DonorManagement = () => {
   const bloodGroups = ['O+', 'A+', 'B+', 'O-', 'A-', 'AB+', 'B-', 'AB-'];
 
   useEffect(() => {
-    fetchEligibleDonors();
+    fetchDonors();
   }, []);
 
   useEffect(() => {
@@ -42,15 +42,15 @@ const DonorManagement = () => {
     setFilteredDonors(filtered);
   }, [searchTerm, donors]);
 
-  const fetchEligibleDonors = async () => {
+  const fetchDonors = async () => {
     try {
       setLoading(true);
-      const data = await bloodbankDonorService.getEligibleDonors();
+      const data = await bloodbankDonorService.getDonors();
       setDonors(data);
       setFilteredDonors(data);
     } catch (err) {
       console.error('Failed to load donors:', err);
-      error('Failed to load eligible donors');
+      error('Failed to load donors');
     } finally {
       setLoading(false);
     }
@@ -107,12 +107,12 @@ const DonorManagement = () => {
                 Donor Management
               </h1>
               <p className="text-gray-500 text-sm mt-1">
-                Manage and communicate with eligible donors in your area
+                Manage and communicate with all donors in your area
               </p>
             </div>
           </div>
           <button
-            onClick={fetchEligibleDonors}
+            onClick={fetchDonors}
             className="mt-4 md:mt-0 flex items-center px-4 py-2 bg-white text-gray-600 rounded-lg hover:bg-gray-50 transition-all shadow-sm border border-gray-200"
           >
             <ArrowPathIcon className="h-4 w-4 mr-2" />
@@ -123,9 +123,9 @@ const DonorManagement = () => {
         {/* Stats Overview */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
           <div className="bg-white rounded-xl shadow-sm p-4 border-l-4 border-red-500">
-            <p className="text-sm text-gray-500 mb-1">Total Eligible Donors</p>
+            <p className="text-sm text-gray-500 mb-1">Total Donors</p>
             <p className="text-2xl font-bold text-gray-900">{donors.length}</p>
-            <p className="text-xs text-green-600 mt-1">Ready to donate</p>
+            <p className="text-xs text-green-600 mt-1">{donors.filter(d => d.eligibility_status === 'Eligible Now').length} Ready to donate</p>
           </div>
           <div className="bg-white rounded-xl shadow-sm p-4 border-l-4 border-blue-500">
             <p className="text-sm text-gray-500 mb-1">Blood Groups Available</p>
@@ -228,10 +228,10 @@ const DonorManagement = () => {
               <div>
                 <h3 className="text-lg font-semibold text-gray-800 flex items-center">
                   <HeartIcon className="h-5 w-5 text-red-500 mr-2" />
-                  Eligible Donors in Your City
+                  Donors in Your City
                 </h3>
                 <p className="text-xs text-gray-500 mt-1">
-                  {filteredDonors.length} donor{filteredDonors.length !== 1 ? 's' : ''} currently eligible
+                  {filteredDonors.length} donor{filteredDonors.length !== 1 ? 's' : ''} found
                 </p>
               </div>
               
@@ -314,8 +314,17 @@ const DonorManagement = () => {
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap">
                         <div className="flex items-center">
-                          <CheckCircleIcon className="h-4 w-4 text-green-500 mr-1" />
-                          <span className="text-xs text-green-600 font-medium">Eligible</span>
+                          {donor.eligibility_status === 'Eligible Now' ? (
+                            <>
+                              <CheckCircleIcon className="h-4 w-4 text-green-500 mr-1" />
+                              <span className="text-xs text-green-600 font-medium">Eligible Now</span>
+                            </>
+                          ) : (
+                            <>
+                              <XCircleIcon className="h-4 w-4 text-orange-500 mr-1" />
+                              <span className="text-xs text-orange-600 font-medium">{donor.eligibility_status || 'Ineligible'}</span>
+                            </>
+                          )}
                         </div>
                       </td>
                     </tr>
@@ -325,9 +334,9 @@ const DonorManagement = () => {
                     <td colSpan="6" className="px-6 py-12 text-center">
                       <div className="flex flex-col items-center">
                         <UserGroupIcon className="h-12 w-12 text-gray-300 mb-3" />
-                        <p className="text-gray-500 text-sm mb-1">No eligible donors found</p>
+                        <p className="text-gray-500 text-sm mb-1">No donors found</p>
                         <p className="text-xs text-gray-400">
-                          {searchTerm ? 'Try adjusting your search' : 'Check back later for eligible donors'}
+                          {searchTerm ? 'Try adjusting your search' : 'Check back later for donors'}
                         </p>
                       </div>
                     </td>

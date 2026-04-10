@@ -47,7 +47,7 @@ class AllocationRequestSerializer(serializers.ModelSerializer):
         fields = [
             'id', 'hospital_id', 'hospital_name', 'blood_group',
             'units_requested', 'units_allocated', 'status',
-            'emergency_flag', 'requested_at', 'allocated_at',
+            'emergency_flag', 'is_emergency_broadcast', 'requested_at', 'allocated_at',
             'notes', 'items', 'assigned_banks'
         ]
     

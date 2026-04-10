@@ -12,6 +12,7 @@ import {
   ArrowTrendingUpIcon 
 } from '@heroicons/react/24/outline';
 import DemandChart from '../../components/charts/DemandChart';
+import LocalInventory from '../../components/hospital/LocalInventory';
 import Loader from '../../components/common/Loader';
 
 const HospitalDashboard = () => {
@@ -58,7 +59,7 @@ const HospitalDashboard = () => {
         requests = [];
       }
 
-      setRecentRequests(requests.slice(0, 5));
+      setRecentRequests(requests.slice(0, 4));
 
       const statsUpdate = {
         totalRequests: requests.length,
@@ -182,7 +183,6 @@ const HospitalDashboard = () => {
               </div>
             )}
           </div>
-
           <div className="bg-white rounded-xl shadow-lg p-6">
             <h3 className="text-lg font-semibold text-gray-900 mb-4">
               Recent Requests
@@ -224,6 +224,11 @@ const HospitalDashboard = () => {
               View All Requests →
             </Link>
           </div>
+          <div className="lg:col-span-2">
+            <LocalInventory />
+          </div>
+
+          
         </div>
       </div>
     </div>

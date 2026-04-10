@@ -12,6 +12,7 @@ class AllocationService {
       blood_group: data.blood_group,
       units_requested: data.units_requested,
       emergency_flag: data.emergency_flag || false,
+      is_emergency_broadcast: data.is_emergency_broadcast || false,
       notes: data.notes || '',
       hospital: data.hospital_id
     };

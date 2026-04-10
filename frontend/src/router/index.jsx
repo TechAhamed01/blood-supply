@@ -31,7 +31,8 @@ import PendingRequests from '../pages/bloodbank/PendingRequests';
 import FulfillRequest from '../pages/bloodbank/FulfillRequest';
 import BloodBankProfile from '../pages/bloodbank/BloodBankProfile';
 import AddInventory from '../pages/bloodbank/AddInventory';
-import DonorManagement from '../pages/bloodbank/DonorManagement'; // Ensure this is imported
+import DonorManagement from '../pages/bloodbank/DonorManagement';
+import FulfillmentHistory from '../pages/bloodbank/FulfillmentHistory';
 
 // Admin Pages
 import AdminDashboard from '../pages/admin/AdminDashboard';
@@ -144,6 +145,11 @@ const AppRouter = () => {
           <Route path="pending-requests" element={
             <PrivateRoute requiredRole="BLOODBANK">
               <PendingRequests />
+            </PrivateRoute>
+          } />
+          <Route path="history" element={
+            <PrivateRoute requiredRole="BLOODBANK">
+              <FulfillmentHistory />
             </PrivateRoute>
           } />
           <Route path="requests/:id" element={

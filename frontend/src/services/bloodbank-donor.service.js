@@ -1,8 +1,8 @@
 import api from './api';
 
 class BloodBankDonorService {
-  async getEligibleDonors() {
-    const response = await api.get('/donors/eligible-donors/');
+  async getDonors() {
+    const response = await api.get('/donors/bloodbank-donors/');
     return response.data;
   }
 
