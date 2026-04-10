@@ -1,7 +1,8 @@
 from rest_framework import serializers
 from rest_framework_simplejwt.serializers import TokenObtainPairSerializer
 from rest_framework_simplejwt.tokens import RefreshToken
-from .models import Donor, DonationHistory, Notification
+from .models import Donor, DonationHistory
+from apps.notifications.models import Notification
 from apps.bloodbanks.serializers import BloodBankSerializer
 
 class DonorMinimalSerializer(serializers.ModelSerializer):

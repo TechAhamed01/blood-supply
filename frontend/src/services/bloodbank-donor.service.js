@@ -7,7 +7,7 @@ class BloodBankDonorService {
   }
 
   async sendNotification(data) {
-    const response = await api.post('/donors/send-notification/', data);
+    const response = await api.post('/notifications/send-to-donors/', data);
     return response.data;
   }
 }

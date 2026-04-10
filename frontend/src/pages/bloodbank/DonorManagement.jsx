@@ -33,7 +33,7 @@ const DonorManagement = () => {
 
   useEffect(() => {
     // Filter donors based on search term
-    const filtered = donors.filter(donor => 
+    const filtered = donors.filter(donor =>
       donor.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
       donor.donor_id.toLowerCase().includes(searchTerm.toLowerCase()) ||
       donor.blood_group.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -158,7 +158,7 @@ const DonorManagement = () => {
             </div>
             <h2 className="text-lg font-semibold text-gray-800">Send Notification to Eligible Donors</h2>
           </div>
-          
+
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
             <div>
               <label className="block text-xs font-medium text-gray-500 mb-1">
@@ -178,7 +178,7 @@ const DonorManagement = () => {
                 </select>
               </div>
             </div>
-            
+
             <div className="md:col-span-2">
               <label className="block text-xs font-medium text-gray-500 mb-1">
                 Notification Message
@@ -195,7 +195,7 @@ const DonorManagement = () => {
               </div>
             </div>
           </div>
-          
+
           <div className="flex justify-end">
             <button
               onClick={handleSendNotification}
@@ -234,7 +234,7 @@ const DonorManagement = () => {
                   {filteredDonors.length} donor{filteredDonors.length !== 1 ? 's' : ''} found
                 </p>
               </div>
-              
+
               {/* Search Bar */}
               <div className="relative w-full md:w-64">
                 <MagnifyingGlassIcon className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />

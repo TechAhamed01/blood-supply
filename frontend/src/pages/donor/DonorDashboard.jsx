@@ -30,8 +30,13 @@ const DonorDashboard = () => {
 
   const fetchDashboard = async () => {
     try {
-      const data = await donorService.getDashboard();
+      const [data, notifs] = await Promise.all([
+        donorService.getDashboard(),
+        donorService.getNotifications()
+      ]);
       setDashboard(data);
+      const unread = notifs.filter(n => !n.is_read).length;
+      setDashboard(prev => ({ ...prev, unreadNotifications: unread }));
     } catch (err) {
       console.error('Failed to load dashboard', err);
     } finally {
@@ -250,10 +255,17 @@ const DonorDashboard = () => {
               <h3 className="text-lg font-semibold text-gray-900 mb-2">Notifications</h3>
               <p className="text-sm text-gray-500 mb-4">Check alerts and updates from blood banks</p>
               <div className="flex items-center text-xs text-gray-400">
-                <span className="flex items-center">
-                  <span className="h-2 w-2 bg-red-500 rounded-full animate-pulse mr-1"></span>
-                  Stay updated
-                </span>
+                {dashboard?.unreadNotifications > 0 ? (
+                  <span className="flex items-center text-red-600 font-bold">
+                    <span className="h-2 w-2 bg-red-500 rounded-full animate-pulse mr-2"></span>
+                    {dashboard.unreadNotifications} unread message{dashboard.unreadNotifications > 1 ? 's' : ''}
+                  </span>
+                ) : (
+                  <span className="flex items-center">
+                    <span className="h-2 w-2 bg-gray-300 rounded-full mr-2"></span>
+                    All caught up
+                  </span>
+                )}
               </div>
             </div>
           </Link>

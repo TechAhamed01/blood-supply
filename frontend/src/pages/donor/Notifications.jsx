@@ -43,9 +43,11 @@ const Notifications = () => {
               <div key={notif.id} className={`bg-white rounded-lg shadow p-4 ${!notif.is_read ? 'border-l-4 border-primary-500' : ''}`}>
                 <div className="flex justify-between items-start">
                   <div>
-                    <p className="font-medium">{notif.message}</p>
-                    <p className="text-sm text-gray-500 mt-1">
-                      {notif.bloodbank_name} • {formatDateTime(notif.created_at)}
+                    {notif.title && <p className="font-bold text-gray-900 mb-1">{notif.title}</p>}
+                    <p className="font-medium text-gray-700">{notif.message}</p>
+                    <p className="text-sm text-gray-500 mt-2 flex items-center">
+                      <span className="font-semibold text-red-600 mr-2">{notif.bloodbank_name}</span> 
+                      • {formatDateTime(notif.created_at)}
                     </p>
                   </div>
                   {!notif.is_read && (

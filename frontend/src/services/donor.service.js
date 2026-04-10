@@ -51,12 +51,17 @@ class DonorService {
   }
 
   async getNotifications() {
-    const response = await donorApi.get('/donors/notifications/');
-    return response.data;
+    const response = await donorApi.get('/notifications/');
+    return Array.isArray(response.data.results) ? response.data.results : (Array.isArray(response.data) ? response.data : []);
   }
 
   async markNotificationRead(id) {
-    const response = await donorApi.post(`/donors/notifications/${id}/read/`);
+    const response = await donorApi.post(`/notifications/${id}/read/`);
+    return response.data;
+  }
+
+  async markAllNotificationsRead() {
+    const response = await donorApi.post('/notifications/read-all/');
     return response.data;
   }
 

@@ -1,6 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../contexts/AuthContext';
+import { useDonor } from '../../contexts/DonorContext';
 import { useTheme } from '../../contexts/ThemeContext';
 import { 
   Bars3Icon, 
@@ -16,9 +17,11 @@ import {
   BellAlertIcon
 } from '@heroicons/react/24/outline';
 import notificationService from '../../services/notification.service';
+import donorService from '../../services/donor.service';
 
 const Navbar = () => {
   const { user, isAuthenticated, logout, hasRole } = useAuth();
+  const { donor, logout: donorLogout } = useDonor();
   const { isDark, toggleTheme } = useTheme();
   const navigate = useNavigate();
   const [isOpen, setIsOpen] = useState(false);
@@ -29,9 +32,14 @@ const Navbar = () => {
   const notificationsRef = useRef(null);
 
   const fetchNotifications = async () => {
-    if (!isAuthenticated) return;
+    if (!isAuthenticated && !donor) return;
     try {
-      const data = await notificationService.getNotifications(false);
+      let data;
+      if (donor) {
+        data = await donorService.getNotifications();
+      } else {
+        data = await notificationService.getNotifications(false);
+      }
       setNotifications(data);
     } catch(err) {
       console.error(err);
@@ -42,32 +50,44 @@ const Navbar = () => {
     fetchNotifications();
     const interval = setInterval(fetchNotifications, 30000);
     return () => clearInterval(interval);
-  }, [isAuthenticated]);
+  }, [isAuthenticated, donor]);
 
   const markRead = async (id) => {
     try {
-      await notificationService.markAsRead(id);
+      if (donor) {
+        await donorService.markNotificationRead(id);
+      } else {
+        await notificationService.markAsRead(id);
+      }
       fetchNotifications();
     } catch(err) {}
   };
 
   const markAllRead = async () => {
     try {
-      await notificationService.markAllAsRead();
+      if (donor) {
+        await donorService.markAllNotificationsRead();
+      } else {
+        await notificationService.markAllAsRead();
+      }
       fetchNotifications();
     } catch(err) {}
   };
 
   const handleLogout = () => {
-    logout();
+    if (donor) {
+      donorLogout();
+    } else {
+      logout();
+    }
     navigate('/login');
   };
 
   const getDashboardLink = () => {
+    if (donor) return '/donor/dashboard';
     if (hasRole('ADMIN')) return '/admin';
     if (hasRole('HOSPITAL')) return '/hospital';
     if (hasRole('BLOODBANK')) return '/bloodbank';
-    if (hasRole('DONOR')) return '/donor/dashboard';
     return '/';
   };
 
@@ -136,7 +156,7 @@ const Navbar = () => {
               {isDark ? <SunIcon className="h-5 w-5" /> : <MoonIcon className="h-5 w-5" />}
             </button>
 
-            {isAuthenticated && (
+            { (isAuthenticated || donor) && (
               <div className="relative" ref={notificationsRef}>
                 <button
                   onClick={() => setIsNotificationsOpen(!isNotificationsOpen)}
@@ -193,7 +213,7 @@ const Navbar = () => {
               </div>
             )}
 
-            {isAuthenticated ? (
+            { (isAuthenticated || donor) ? (
               <div className="relative" ref={dropdownRef}>
                 <button
                   onClick={() => setIsDropdownOpen(!isDropdownOpen)}
@@ -204,7 +224,7 @@ const Navbar = () => {
                     <span className="absolute -top-1 -right-1 w-2 h-2 bg-green-500 rounded-full"></span>
                   </div>
                   <span className="text-sm font-medium text-gray-700 group-hover:text-primary-600">
-                    {user?.role?.toLowerCase()}
+                    {donor ? 'donor' : user?.role?.toLowerCase()}
                   </span>
                   <ChevronDownIcon className={`h-4 w-4 text-gray-500 transition-transform duration-200 ${isDropdownOpen ? 'rotate-180' : ''}`} />
                 </button>
@@ -212,7 +232,7 @@ const Navbar = () => {
                 {isDropdownOpen && (
                   <div className="absolute right-0 mt-2 w-56 bg-white rounded-xl shadow-xl border border-gray-100 py-1 z-50">
                     <div className="px-4 py-3 border-b border-gray-100">
-                      <p className="text-sm font-medium text-gray-900">{user?.role}</p>
+                      <p className="text-sm font-medium text-gray-900">{donor ? donor.name : user?.role}</p>
                       <p className="text-xs text-gray-500 mt-1">Signed in</p>
                     </div>
                     
@@ -304,7 +324,7 @@ const Navbar = () => {
               </Link>
             )}
             
-            {isAuthenticated && (
+            { (isAuthenticated || donor) && (
               <>
                 <Link 
                   to={getDashboardLink()} 
